@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英単語テスト作成アプリ</title>
+    <!-- html2pdf.js の読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #f7f9fc;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-width: 150px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        select, input[type="number"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .btn-download {
+            background-color: #27ae60;
+            margin-top: 20px;
+            display: none;
+        }
+        .btn-download:hover {
+            background-color: #2ecc71;
+        }
+        
+        /* テスト用紙エリア */
+        #test-paper {
+            padding: 20px;
+            background: #fff;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 10px;
+        }
+        .test-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .name-box {
+            width: 200px;
+            border-bottom: 1px solid #000;
+            display: inline-block;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 10px;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f2f2f2;
+            width: 10%;
+        }
+        .col-question {
+            width: 45%;
+        }
+        .col-answer {
+            width: 45%;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>英単語テスト作成アプリ</h1>
+    
+    <div class="controls">
+        <div class="control-group">
+            <label for="question-count">問題数</label>
+            <input type="number" id="question-count" value="10" min="1" max="132">
+        </div>
+        <div class="control-group">
+            <label for="question-type">出題形式</label>
+            <select id="question-type">
+                <option value="en-ja">英単語 → 意味</option>
+                <option value="ja-en">意味 → 英単語</option>
+            </select>
+        </div>
+        <div class="control-group" style="justify-content: flex-end;">
+            <button onclick="generateTest()">テストを作成</button>
+        </div>
+    </div>
+
+    <div id="test-container" style="display: none;">
+        <div id="test-paper">
+            <!-- 問題ページ -->
+            <div id="question-page">
+                <div class="test-header">
+                    <h2>英単語テスト</h2>
+                </div>
+                <div class="test-info">
+                    <span>日付： 月 日</span>
+                    <span>氏名： <span class="name-box"></span></span>
+                    <span>得点： / <span id="display-count"></span></span>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th class="col-question">問題</th>
+                            <th class="col-answer">解答</th>
+                        </tr>
+                    </thead>
+                    <tbody id="test-body">
+                        <!-- 問題がここに挿入される -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="page-break"></div>
+
+            <!-- 解答ページ -->
+            <div id="answer-page">
+                <div class="test-header">
+                    <h2>英単語テスト (解答)</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th class="col-question">問題</th>
+                            <th class="col-answer">正解</th>
+                        </tr>
+                    </thead>
+                    <tbody id="answer-body">
+                        <!-- 解答がここに挿入される -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <button class="btn-download" id="download-btn" onclick="downloadPDF()">PDFでダウンロード</button>
+    </div>
+</div>
+
+<script>
+    // 抽出された英単語データ
+    const wordData = [{"en": "vital", "ja": "(\uff5e\u306b\u3068\u3063\u3066)\u975e\u5e38\u306b\u91cd\u8981\u306a\uff1b \u751f\u547d\u306e"}, {"en": "vivid", "ja": "\u751f\u304d\u751f\u304d\u3068\u3057\u305f, \u9bae\u3084\u304b\u306a"}, {"en": "revive", "ja": "\uff5e\u3092\u751f\u304d\u8fd4\u3089\u305b\u308b, \u751f\u304d\u8fd4\u308b"}, {"en": "essential", "ja": "(\uff5e\u306b\u3068\u3063\u3066)\u91cd\u8981\u306a, \u5fc5\u8981\u4e0d\u53ef\u6b20\u306a\uff1b \u672c\u8cea\u7684\u306a"}, {"en": "indispensable", "ja": "(\uff5e\u306b\u3068\u3063\u3066)\u91cd\u8981\u306a, \u5fc5\u8981\u4e0d\u53ef\u6b20\u306a"}, {"en": "crucial", "ja": "\u6c7a\u5b9a\u7684\u306a, \u6975\u3081\u3066\u91cd\u8981\u306a"}, {"en": "significance", "ja": "\u91cd\u8981\u6027"}, {"en": "consequence", "ja": "\u7d50\u679c, \u91cd\u8981\u3055"}, {"en": "matter", "ja": "\u4e8b\u67c4, \u554f\u984c\uff1b \u91cd\u8981\u3067\u3042\u308b"}, {"en": "count", "ja": "\uff5e\u3092\u6570\u3048\u308b\uff1b \u91cd\u8981\u3067\u3042\u308b"}, {"en": "make a difference", "ja": "\u91cd\u8981\u3067\u3042\u308b"}, {"en": "trivial", "ja": "\u3055\u3055\u3044\u306a, \u3042\u308a\u3075\u308c\u305f"}, {"en": "trifle", "ja": "\u3055\u3055\u3044\u306a\u4e8b, \u304f\u3060\u3089\u306a\u3044\u4e8b"}, {"en": "common", "ja": "\u5171\u901a\u306e, \u3088\u304f\u3042\u308b, \u4e00\u822c\u7684\u306a, \u3042\u308a\u3075\u308c\u305f"}, {"en": "ordinary", "ja": "\u666e\u901a\u306e, \u901a\u5e38\u306e, \u3042\u308a\u3075\u308c\u305f"}, {"en": "familiar", "ja": "(\uff5e\u306b)\u3088\u304f\u77e5\u3089\u308c\u305f\uff1b \u7cbe\u901a\u3057\u3066\u3044\u308b\uff1b \u89aa\u3057\u3044"}, {"en": "emphasize", "ja": "\uff5e\u3092\u5f37\u8abf\u3059\u308b"}, {"en": "stress", "ja": "\uff5e\u3092\u5f37\u8abf\u3059\u308b\uff1b \u30b9\u30c8\u30ec\u30b9, \u91cd\u70b9, \u5f37\u8abf"}, {"en": "neglect", "ja": "\uff5e\u3092(\u3046\u3063\u304b\u308a)\u6020\u308b, \uff5e\u3092\u7121\u8996\u3059\u308b"}, {"en": "ignore", "ja": "\uff5e\u3092\u7121\u8996\u3059\u308b, \uff5e\u3092\u77e5\u3089\u306a\u3044\u3075\u308a\u3092\u3059\u308b"}, {"en": "eminent", "ja": "\u8457\u540d\u306a"}, {"en": "prominent", "ja": "\u76ee\u7acb\u3063\u305f\uff1b \u6709\u540d\u306a"}, {"en": "primary", "ja": "\u7b2c1\u306e, \u4e3b\u8981\u306a"}, {"en": "tiny", "ja": "\u3061\u3063\u307d\u3051\u306a"}, {"en": "slight", "ja": "\u308f\u305a\u304b\u306a, \u53d6\u308b\u306b\u8db3\u3089\u306a\u3044"}, {"en": "character", "ja": "\u6027\u683c, \u4eba\u683c, \u7279\u5fb4, \u767b\u5834\u4eba\u7269, \u6587\u5b57"}, {"en": "feature", "ja": "(\u76ee\u7acb\u3063\u305f)\u7279\u5fb4, \u9854\u7acb\u3061\uff1b \uff5e\u3092\u7279\u96c6\u3059\u308b"}, {"en": "trait", "ja": "\u7279\u5fb4, \u7279\u8272"}, {"en": "typical", "ja": "\u5178\u578b\u7684\u306a, \u3089\u3057\u3044"}, {"en": "unique", "ja": "\u7279\u6709\u306e, \u72ec\u81ea\u306e\uff1b \u552f\u4e00\u306e"}, {"en": "peculiar", "ja": "\u7279\u6709\u306e\uff1b \u98a8\u5909\u308f\u308a\u306a"}, {"en": "particular", "ja": "\u7279\u5b9a\u306e, \u7279\u5225\u306e"}, {"en": "general", "ja": "\u5168\u822c\u7684\u306a, \u4e00\u822c\u7684\u306a"}, {"en": "specify", "ja": "\uff5e\u3092\u7279\u5b9a\u3059\u308b"}, {"en": "distinguish", "ja": "\uff5e\u3092\u533a\u5225\u3059\u308b, \u898b\u5206\u3051\u308b"}, {"en": "define", "ja": "\uff5e\u3092\u5b9a\u7fa9\u3059\u308b, \u660e\u78ba\u306b\u3059\u308b"}, {"en": "vague", "ja": "\u66d6\u6627\u306a, \u6f20\u7136\u3068\u3057\u305f"}, {"en": "obscure", "ja": "\u4e0d\u660e\u77ad\u306a, \u307c\u3084\u3051\u305f\uff1b \u4e16\u306b\u77e5\u3089\u308c\u3066\u3044\u306a\u3044"}, {"en": "ambiguous", "ja": "\u66d6\u6627\u306a, \u3069\u3061\u3089\u3068\u3082\u3068\u308c\u308b"}, {"en": "obvious", "ja": "\u660e\u767d\u306a"}, {"en": "evident", "ja": "\u660e\u767d\u306a"}, {"en": "apparent", "ja": "\u898b\u305f\u3068\u3053\u308d\u306e, \u660e\u767d\u306a"}, {"en": "respect", "ja": "\u5c0a\u656c, \u5c0a\u91cd, \u70b9, \u4e8b\u9805\uff1b \uff5e\u3092\u5c0a\u656c\u3059\u308b"}, {"en": "aspect", "ja": "\u5074\u9762, \u69d8\u76f8, \u70b9"}, {"en": "detail", "ja": "\u8a73\u7d30"}, {"en": "precise", "ja": "\u6b63\u78ba\u306a"}, {"en": "accurate", "ja": "\u6b63\u78ba\u306a"}, {"en": "structure", "ja": "\u69cb\u9020, \u69cb\u6210, \u9aa8\u683c"}, {"en": "construct", "ja": "\uff5e\u3092\u5efa\u8a2d\u3059\u308b, \u7d44\u307f\u7acb\u3066\u308b"}, {"en": "destroy", "ja": "\uff5e\u3092\u7834\u58ca\u3059\u308b, \u6ec5\u307c\u3059"}, {"en": "architecture", "ja": "\u5efa\u7bc9, \u5efa\u7bc9\u5b66"}, {"en": "constitute", "ja": "\uff5e\u3092\u69cb\u6210\u3059\u308b, \u5360\u3081\u308b\uff1b \u8a2d\u7acb\u3059\u308b"}, {"en": "institute", "ja": "\uff5e(\u6cd5\u5f8b\u30fb\u5236\u5ea6)\u3092\u5236\u5b9a\u3059\u308b\uff1b \u5354\u4f1a, \u7814\u7a76\u6240"}, {"en": "substitute", "ja": "\uff5e\u3092\u4ee3\u7528\u3059\u308b\uff1b \u4ee3\u7528\u54c1, \u4ee3\u7406\u4eba"}, {"en": "stable", "ja": "\u5b89\u5b9a\u3057\u305f"}, {"en": "establish", "ja": "\uff5e\u3092\u8a2d\u7acb\u3059\u308b, \u78ba\u7acb\u3059\u308b"}, {"en": "subject", "ja": "\u79d1\u76ee, \u4e3b\u984c\uff1b \u60a3\u8005\uff1b \u5f93\u5c5e\u3057\u3066\u3044\u308b"}, {"en": "subdue", "ja": "\uff5e\u3092\u5f81\u670d\u3059\u308b, \u652f\u914d\u3059\u308b, \u6291\u3048\u308b"}, {"en": "submit", "ja": "\u670d\u5f93\u3059\u308b, \u8eab\u3092\u4efb\u305b\u308b\uff1b \u3092\u63d0\u51fa\u3059\u308b"}, {"en": "substance", "ja": "\u7269\u8cea\u3001\u5b9f\u4f53"}, {"en": "fundamental", "ja": "\u6839\u672c\u7684\u306a, \u57fa\u790e\u7684\u306a, \u91cd\u8981\u306a"}, {"en": "fund", "ja": "\u8cc7\u91d1, \u57fa\u91d1"}, {"en": "found", "ja": "\uff5e\u3092\u8a2d\u7acb\u3059\u308b"}, {"en": "foundation", "ja": "\u57fa\u76e4, \u57fa\u790e, \u571f\u53f0"}, {"en": "profound", "ja": "\u6df1\u3044, \u6df1\u9060\u306a"}, {"en": "base", "ja": "\u571f\u53f0\u3001\u57fa\u790e"}, {"en": "basis", "ja": "\u57fa\u790e"}, {"en": "ground", "ja": "\u904b\u52d5\u5834, \u5730\u9762, \u6839\u62e0, \u7406\u7531"}, {"en": "superficial", "ja": "\u3046\u308f\u3079\u306e"}, {"en": "shallow", "ja": "\u6d45\u3044\uff1b \u6d45\u306f\u304b\u306a, \u3046\u308f\u3079\u306e"}, {"en": "superb", "ja": "\u3059\u3070\u3089\u3057\u3044, \u898b\u4e8b\u306a"}, {"en": "supervise", "ja": "\uff5e\u3092\u76e3\u8996\u3059\u308b, \u6307\u63ee\u3059\u308b"}, {"en": "superstition", "ja": "\u8ff7\u4fe1"}, {"en": "core", "ja": "\u4e2d\u5fc3, \u6838\u5fc3\uff1b \u82af"}, {"en": "surface", "ja": "\u8868\u9762, \u8868\u5c64"}, {"en": "internal", "ja": "\u5185\u9762\u306e, \u5185\u5074\u306e"}, {"en": "external", "ja": "\u5916\u5074\u306e"}, {"en": "concentrate", "ja": "\u96c6\u4e2d\u3059\u308b\uff1b \uff5e\u3092\u96c6\u4e2d\u3055\u305b\u308b"}, {"en": "focus", "ja": "\u96c6\u4e2d\u3059\u308b, \u91cd\u70b9\u3092\u7f6e\u304f\uff1b \u7126\u70b9"}, {"en": "compose", "ja": "\uff5e\u3092\u69cb\u6210\u3059\u308b\uff1b \u4f5c\u66f2\u30fb\u4f5c\u6587\u3059\u308b"}, {"en": "consist", "ja": "\u6210\u308b, \u3042\u308b, \u5b58\u5728\u3059\u308b"}, {"en": "organize", "ja": "\uff5e\u3092\u7d44\u7e54\u3059\u308b"}, {"en": "element", "ja": "\u8981\u7d20, \u5143\u7d20"}, {"en": "component", "ja": "\u69cb\u6210\u8981\u7d20, \u90e8\u5206"}, {"en": "complex", "ja": "\u8907\u96d1\u306a, \u8907\u5408\u306e"}, {"en": "complicated", "ja": "\u8907\u96d1\u306a"}, {"en": "reveal", "ja": "\uff5e\u3092\u660e\u3089\u304b\u306b\u3059\u308b, \u66b4\u9732\u3059\u308b"}, {"en": "conceal", "ja": "\uff5e\u3092\u96a0\u3059"}, {"en": "expose", "ja": "\uff5e\u3092\u3055\u3089\u3059"}, {"en": "impose", "ja": "\uff5e\u3092\u8ab2\u3059, \u62bc\u3057\u3064\u3051\u308b"}, {"en": "divide", "ja": "\uff5e\u3092\u5206\u5272\u3059\u308b"}, {"en": "diffuse", "ja": "\uff5e\u3092\u307e\u304d\u6563\u3089\u3059, \u5206\u6563\u3059\u308b\uff1b \u62e1\u6563\u3059\u308b"}, {"en": "scatter", "ja": "\uff5e\u3092\u307e\u304d\u6563\u3089\u3059"}, {"en": "spread", "ja": "\u5e83\u304c\u308b, \u666e\u53ca\u3059\u308b"}, {"en": "bend", "ja": "\uff5e\u3092\u66f2\u3052\u308b"}, {"en": "incline", "ja": "\uff5e\u3092\u50be\u3051\u308b, \u6c17\u6301\u3061\u306b\u3055\u305b\u308b"}, {"en": "lean", "ja": "\u5bc4\u308a\u304b\u304b\u308b, \u3082\u305f\u308c\u308b"}, {"en": "erect", "ja": "\uff5e\u3092\u76f4\u7acb\u3055\u305b\u308b, \u5efa\u3066\u308b\uff1b \u76f4\u7acb\u3057\u305f"}, {"en": "emit", "ja": "\uff5e\u3092\u653e\u51fa\u3059\u308b, \u6392\u51fa\u3059\u308b"}, {"en": "absorb", "ja": "\uff5e\u3092\u5438\u53ce\u3059\u308b"}, {"en": "attract", "ja": "\uff5e\u3092\u60f9\u304d\u4ed8\u3051\u308b, \u9b45\u4e86\u3059\u308b"}, {"en": "extract", "ja": "\uff5e\u3092\u629c\u304d\u51fa\u3059, \u62bd\u51fa\u3059\u308b"}, {"en": "aim", "ja": "\u76ee\u6a19, \u76ee\u7684\uff1b \u72d9\u3046, \u76ee\u6a19\u3068\u3059\u308b"}, {"en": "penetrate", "ja": "\uff5e\u3092\u8cab\u901a\u3059\u308b, \uff5e\u306b\u6d78\u900f\u3059\u308b"}, {"en": "thrust", "ja": "\uff5e\u3092\u62bc\u3057\u4ed8\u3051\u308b, \u7a81\u3063\u8fbc\u3080"}, {"en": "insert", "ja": "\uff5e\u3092\u633f\u5165\u3059\u308b"}, {"en": "grasp", "ja": "\uff5e\u3092\u63b4\u3080, \u63e1\u308b\uff1b \u7406\u89e3\u3059\u308b"}, {"en": "grab", "ja": "\uff5e\u3092\u63b4\u3080"}, {"en": "seize", "ja": "\uff5e\u3092\u63b4\u3080, (\u611f\u60c5\u306a\u3069\u304c)\u3092\u8972\u3046\uff1b \u62bc\u53ce\u3059\u308b"}, {"en": "drag", "ja": "\uff5e\u3092\u5f15\u304d\u305a\u308b"}, {"en": "cling", "ja": "\u3057\u304c\u307f\u3064\u304f, \u56fa\u57f7\u3059\u308b"}, {"en": "stick", "ja": "\u68d2\uff1b \u304f\u3063\u3064\u304f, \u56fa\u57f7\u3059\u308b"}, {"en": "attach", "ja": "\uff5e\u3092\u304f\u3063\u3064\u3051\u308b\uff1b \u611b\u7740\u3092\u6301\u305f\u305b\u308b"}, {"en": "imitate", "ja": "\uff5e\u3092\u771f\u4f3c\u308b"}, {"en": "fold", "ja": "\uff5e\u3092\u6298\u308a\u7573\u3080"}, {"en": "tear", "ja": "\uff5e\u3092\u5f15\u304d\u88c2\u304f"}, {"en": "mold", "ja": "\uff5e\u3092\u304b\u305f\u3069\u308b, \u5f62\u6210\u3059\u308b"}, {"en": "distort", "ja": "\uff5e\u3092\u6b6a\u3081\u308b"}, {"en": "expand", "ja": "\uff5e\u3092\u62e1\u5927\u3059\u308b\uff1b \u81a8\u5f35\u3059\u308b"}, {"en": "shrink", "ja": "\u7e2e\u3080"}, {"en": "swell", "ja": "\u81a8\u3089\u3080"}, {"en": "assemble", "ja": "\uff5e\u3092\u96c6\u3081\u308b, \u7d44\u307f\u7acb\u3066\u308b"}, {"en": "collect", "ja": "\uff5e\u3092\u96c6\u3081\u308b\uff1b \u5fb4\u53ce\u3059\u308b"}, {"en": "cram", "ja": "\uff5e\u3092\u8a70\u3081\u8fbc\u3080"}, {"en": "rotate", "ja": "\uff5e\u3092\u56de\u8ee2\u3059\u308b\uff1b \u56de\u8ee2\u3059\u308b"}, {"en": "twist", "ja": "\uff5e\u3092\u3072\u306d\u308b"}, {"en": "upset", "ja": "\uff5e\u3092\u3072\u3063\u304f\u308a\u8fd4\u3059, \u52d5\u63fa\u3055\u305b\u308b\uff1b \u6012\u3063\u305f"}, {"en": "stir", "ja": "\uff5e\u3092\u304b\u304d\u56de\u3059\uff1b \u9a12\u4e71"}, {"en": "explode", "ja": "\u7206\u767a\u3059\u308b"}, {"en": "burst", "ja": "\u7206\u767a\u3059\u308b"}, {"en": "melt", "ja": "\u6eb6\u3051\u308b\uff1b \uff5e\u3092\u6eb6\u304b\u3059"}, {"en": "leak", "ja": "\u6f0f\u308c\u308b\uff1b \uff5e\u3092\u6f0f\u3089\u3059"}];
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    function generateTest() {
+        const count = parseInt(document.getElementById('question-count').value, 10);
+        const type = document.getElementById('question-type').value;
+        
+        if (count < 1 || count > wordData.length) {
+            alert(`問題数は1から${wordData.length}の間で指定してください。`);
+            return;
+        }
+
+        // 単語リストをシャッフルして必要な数だけ抽出
+        const shuffled = shuffleArray([...wordData]);
+        const selectedWords = shuffled.slice(0, count);
+
+        const testBody = document.getElementById('test-body');
+        const answerBody = document.getElementById('answer-body');
+        
+        testBody.innerHTML = '';
+        answerBody.innerHTML = '';
+        
+        document.getElementById('display-count').textContent = count;
+
+        selectedWords.forEach((item, index) => {
+            const no = index + 1;
+            let questionText, answerText;
+
+            if (type === 'en-ja') {
+                questionText = item.en;
+                answerText = item.ja;
+            } else {
+                questionText = item.ja;
+                answerText = item.en;
+            }
+
+            // 問題行作成
+            const trTest = document.createElement('tr');
+            trTest.innerHTML = `
+                <td style="text-align:center;">${no}</td>
+                <td>${questionText}</td>
+                <td></td>
+            `;
+            testBody.appendChild(trTest);
+
+            // 解答行作成
+            const trAns = document.createElement('tr');
+            trAns.innerHTML = `
+                <td style="text-align:center;">${no}</td>
+                <td>${questionText}</td>
+                <td>${answerText}</td>
+            `;
+            answerBody.appendChild(trAns);
+        });
+
+        document.getElementById('test-container').style.display = 'block';
+        document.getElementById('download-btn').style.display = 'block';
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('test-paper');
+        const opt = {
+            margin:       10,
+            filename:     'word_test.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { scale: 2 },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        // Promise-based API
+        html2pdf().set(opt).from(element).save();
+    }
+</script>
+
+</body>
+</html>
