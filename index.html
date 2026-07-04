@@ -1,280 +1,1123 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英単語テスト作成アプリ</title>
-    <!-- html2pdf.js の読み込み -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <style>
-        body {
-            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-            background-color: #f7f9fc;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-        }
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: #ecf0f1;
-            border-radius: 8px;
-        }
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            min-width: 150px;
-        }
-        label {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        select, input[type="number"] {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        .btn-download {
-            background-color: #27ae60;
-            margin-top: 20px;
-            display: none;
-        }
-        .btn-download:hover {
-            background-color: #2ecc71;
-        }
-        
-        /* テスト用紙エリア */
-        #test-paper {
-            padding: 20px;
-            background: #fff;
-        }
-        .test-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #2c3e50;
-            padding-bottom: 10px;
-        }
-        .test-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        .name-box {
-            width: 200px;
-            border-bottom: 1px solid #000;
-            display: inline-block;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        th, td {
-            border: 1px solid #000;
-            padding: 10px;
-            font-size: 14px;
-        }
-        th {
-            background-color: #f2f2f2;
-            width: 10%;
-        }
-        .col-question {
-            width: 45%;
-        }
-        .col-answer {
-            width: 45%;
-        }
-        .page-break {
-            page-break-before: always;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鉄壁 英単語テストメーカー</title>
+<!-- PDF生成ライブラリ（html2canvasで画像化してPDFに埋め込むため日本語も文字化けしません） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root {
+    --main: #2c5f8a;
+    --main-dark: #1e4463;
+    --accent: #e67e22;
+    --bg: #f2f5f9;
+    --border: #d5dde6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic', Meiryo, sans-serif;
+    background: var(--bg);
+    color: #2b3440;
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.6;
+  }
+  .app {
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  header.app-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  header.app-header h1 {
+    margin: 0 0 4px;
+    color: var(--main-dark);
+    font-size: 26px;
+  }
+  header.app-header p {
+    margin: 0;
+    color: #667;
+    font-size: 13px;
+  }
+  .panel {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(30,50,80,0.06);
+  }
+  .panel > h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    color: var(--main-dark);
+    border-left: 4px solid var(--main);
+    padding-left: 8px;
+  }
+  .section-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 6px 14px;
+    margin-bottom: 10px;
+  }
+  .section-list label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    cursor: pointer;
+    padding: 3px 4px;
+    border-radius: 5px;
+  }
+  .section-list label:hover { background: #eef3f8; }
+  .section-list .wc { color: #889; font-size: 12px; }
+  .mini-btns { display: flex; gap: 8px; }
+  .mini-btns button {
+    font-size: 12px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 5px;
+    cursor: pointer;
+    color: #456;
+  }
+  .mini-btns button:hover { background: #eef3f8; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+  }
+  .control-group { display: flex; flex-direction: column; min-width: 140px; }
+  .control-group label { font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #345; }
+  select, input[type="number"], input[type="text"] {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+  }
+  .btn {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: filter .15s;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn-primary { background: var(--main); color: #fff; }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-ghost { background: #fff; color: var(--main-dark); border: 1px solid var(--border); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .pool-info { font-size: 13px; color: #567; margin-top: 10px; }
+  .pool-info strong { color: var(--main-dark); font-size: 15px; }
+
+  /* ===== データ取り込み ===== */
+  details.import-box summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--main-dark);
+  }
+  details.import-box .import-inner { margin-top: 10px; }
+  details.import-box textarea {
+    width: 100%;
+    height: 140px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 13px;
+    font-family: Consolas, Monaco, 'Hiragino Kaku Gothic ProN', Meiryo, monospace;
+    resize: vertical;
+  }
+  .import-note { font-size: 12.5px; color: #667; margin: 6px 0 10px; }
+  .import-note code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; }
+  .import-msg { font-size: 13px; margin-top: 8px; min-height: 1.2em; }
+  .import-msg.ok { color: #1e7d3c; }
+  .import-msg.err { color: #c0392b; }
+
+  /* ===== テスト用紙 ===== */
+  #result-area { display: none; }
+  .paper-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 18px 0;
+  }
+  #test-paper {
+    background: #fff;
+    color: #000;
+  }
+  .sheet {
+    padding: 10mm 8mm;
+    background: #fff;
+  }
+  .sheet h2 {
+    text-align: center;
+    margin: 0 0 8px;
+    font-size: 20px;
+    letter-spacing: 2px;
+  }
+  .sheet .test-sub {
+    text-align: center;
+    font-size: 11px;
+    color: #444;
+    margin-bottom: 10px;
+  }
+  .test-info {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    border: 1px solid #000;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+  }
+  .test-info .name-line { border-bottom: 1px solid #000; display: inline-block; min-width: 140px; }
+  table.q-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  table.q-table th, table.q-table td {
+    border: 1px solid #000;
+    padding: 7px 9px;
+    font-size: 13.5px;
+    vertical-align: middle;
+    word-wrap: break-word;
+  }
+  table.q-table th { background: #f0f0f0; font-size: 12.5px; }
+  table.q-table .col-no { width: 8%; text-align: center; }
+  table.q-table .col-q  { width: 46%; }
+  table.q-table .col-a  { width: 46%; }
+  table.q-table td.cell-no { text-align: center; }
+  table.q-table td.cell-blank { height: 26px; }
+  table.q-table tr { page-break-inside: avoid; }
+  .page-break { page-break-before: always; }
+
+  footer.app-footer {
+    text-align: center;
+    font-size: 12px;
+    color: #99a;
+    margin-top: 24px;
+  }
+
+  /* ===== 印刷時はテスト用紙のみ ===== */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .no-print { display: none !important; }
+    .panel { border: none; box-shadow: none; padding: 0; }
+    #result-area { display: block !important; }
+    .sheet { padding: 0; }
+  }
+</style>
 </head>
 <body>
+<div class="app">
 
-<div class="container">
-    <h1>英単語テスト作成アプリ</h1>
-    
+  <header class="app-header no-print">
+    <h1>鉄壁 英単語テストメーカー</h1>
+    <p>単語リストからランダムに単語テストを作成し、PDFでダウンロードできます</p>
+  </header>
+
+  <!-- 出題範囲 -->
+  <div class="panel no-print">
+    <h2>出題範囲</h2>
+    <div class="section-list" id="section-list"></div>
+    <div class="mini-btns">
+      <button type="button" onclick="setAllSections(true)">全て選択</button>
+      <button type="button" onclick="setAllSections(false)">全て解除</button>
+    </div>
+    <div class="pool-info" id="pool-info"></div>
+  </div>
+
+  <!-- 出題設定 -->
+  <div class="panel no-print">
+    <h2>テスト設定</h2>
     <div class="controls">
-        <div class="control-group">
-            <label for="question-count">問題数</label>
-            <input type="number" id="question-count" value="10" min="1" max="132">
+      <div class="control-group">
+        <label for="question-count">問題数</label>
+        <input type="number" id="question-count" value="20" min="1">
+      </div>
+      <div class="control-group">
+        <label for="question-type">出題形式</label>
+        <select id="question-type">
+          <option value="en-ja">英単語 → 日本語の意味</option>
+          <option value="ja-en">日本語の意味 → 英単語</option>
+          <option value="mix">ミックス（英⇄日ランダム）</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="test-title">テスト名（任意）</label>
+        <input type="text" id="test-title" placeholder="英単語テスト">
+      </div>
+      <button class="btn btn-primary" onclick="generateTest()">テストを作成</button>
+    </div>
+  </div>
+
+  <!-- カスタムデータ取り込み -->
+  <div class="panel no-print">
+    <details class="import-box">
+      <summary>単語データの取り込み・編集（サイトの表を貼り付けて差し替え可能）</summary>
+      <div class="import-inner">
+        <p class="import-note">
+          元サイト（ukaru-eigo.com の鉄壁単語リスト）の表をコピーしてそのまま貼り付けると、
+          収録データを差し替え・追加できます。1行につき <code>英単語（タブまたはカンマ）意味</code> の形式です。<br>
+          <code>## セクション名</code> と書いた行を入れると、その行以降をひとつのセクションとして登録します。
+          取り込んだデータはこのブラウザに保存され、次回以降も使えます。
+        </p>
+        <textarea id="import-text" placeholder="例：&#10;## Section 4&#10;vital&#9;(～にとって)非常に重要な&#10;vivid,生き生きとした, 鮮やかな"></textarea>
+        <div class="paper-actions" style="justify-content:flex-start; margin:10px 0 0;">
+          <button class="btn btn-ghost" onclick="importWords(false)">既存データに追加</button>
+          <button class="btn btn-ghost" onclick="importWords(true)">全て差し替え</button>
+          <button class="btn btn-ghost" onclick="resetWords()">初期データに戻す</button>
         </div>
-        <div class="control-group">
-            <label for="question-type">出題形式</label>
-            <select id="question-type">
-                <option value="en-ja">英単語 → 意味</option>
-                <option value="ja-en">意味 → 英単語</option>
-            </select>
-        </div>
-        <div class="control-group" style="justify-content: flex-end;">
-            <button onclick="generateTest()">テストを作成</button>
-        </div>
+        <div class="import-msg" id="import-msg"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- 生成結果 -->
+  <div id="result-area">
+    <div class="paper-actions no-print">
+      <button class="btn btn-accent" id="download-btn" onclick="downloadPDF()">PDFでダウンロード</button>
+      <button class="btn btn-ghost" onclick="window.print()">印刷する</button>
+      <button class="btn btn-ghost" onclick="generateTest()">同じ設定で再作成</button>
     </div>
 
-    <div id="test-container" style="display: none;">
-        <div id="test-paper">
-            <!-- 問題ページ -->
-            <div id="question-page">
-                <div class="test-header">
-                    <h2>英単語テスト</h2>
-                </div>
-                <div class="test-info">
-                    <span>日付： 月 日</span>
-                    <span>氏名： <span class="name-box"></span></span>
-                    <span>得点： / <span id="display-count"></span></span>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>No.</th>
-                            <th class="col-question">問題</th>
-                            <th class="col-answer">解答</th>
-                        </tr>
-                    </thead>
-                    <tbody id="test-body">
-                        <!-- 問題がここに挿入される -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="page-break"></div>
-
-            <!-- 解答ページ -->
-            <div id="answer-page">
-                <div class="test-header">
-                    <h2>英単語テスト (解答)</h2>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>No.</th>
-                            <th class="col-question">問題</th>
-                            <th class="col-answer">正解</th>
-                        </tr>
-                    </thead>
-                    <tbody id="answer-body">
-                        <!-- 解答がここに挿入される -->
-                    </tbody>
-                </table>
-            </div>
+    <div class="panel" style="padding:0; overflow:hidden;">
+      <div id="test-paper">
+        <!-- 問題ページ -->
+        <div class="sheet">
+          <h2 id="paper-title">英単語テスト</h2>
+          <div class="test-sub" id="paper-sub"></div>
+          <div class="test-info">
+            <span>実施日：　　　年　　月　　日</span>
+            <span>氏名：<span class="name-line">　</span></span>
+            <span>得点：　　　／ <span id="display-count"></span></span>
+          </div>
+          <table class="q-table">
+            <thead>
+              <tr><th class="col-no">No.</th><th class="col-q">問題</th><th class="col-a">解答欄</th></tr>
+            </thead>
+            <tbody id="test-body"></tbody>
+          </table>
         </div>
-        
-        <button class="btn-download" id="download-btn" onclick="downloadPDF()">PDFでダウンロード</button>
+
+        <div class="page-break"></div>
+
+        <!-- 解答ページ -->
+        <div class="sheet">
+          <h2 id="answer-title">英単語テスト【解答】</h2>
+          <table class="q-table">
+            <thead>
+              <tr><th class="col-no">No.</th><th class="col-q">問題</th><th class="col-a">正解</th></tr>
+            </thead>
+            <tbody id="answer-body"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <footer class="app-footer no-print">
+    収録データ：ukaru-eigo.com 鉄壁単語リストの表から抽出した語彙（Section 1〜3）＋鉄壁レベルの補充語彙。<br>
+    上の「単語データの取り込み」から元サイトの表を貼り付けると、全データをサイト掲載のものに差し替えられます。
+  </footer>
 </div>
 
 <script>
-    // 抽出された英単語データ
-    const wordData = [{"en": "vital", "ja": "(\uff5e\u306b\u3068\u3063\u3066)\u975e\u5e38\u306b\u91cd\u8981\u306a\uff1b \u751f\u547d\u306e"}, {"en": "vivid", "ja": "\u751f\u304d\u751f\u304d\u3068\u3057\u305f, \u9bae\u3084\u304b\u306a"}, {"en": "revive", "ja": "\uff5e\u3092\u751f\u304d\u8fd4\u3089\u305b\u308b, \u751f\u304d\u8fd4\u308b"}, {"en": "essential", "ja": "(\uff5e\u306b\u3068\u3063\u3066)\u91cd\u8981\u306a, \u5fc5\u8981\u4e0d\u53ef\u6b20\u306a\uff1b \u672c\u8cea\u7684\u306a"}, {"en": "indispensable", "ja": "(\uff5e\u306b\u3068\u3063\u3066)\u91cd\u8981\u306a, \u5fc5\u8981\u4e0d\u53ef\u6b20\u306a"}, {"en": "crucial", "ja": "\u6c7a\u5b9a\u7684\u306a, \u6975\u3081\u3066\u91cd\u8981\u306a"}, {"en": "significance", "ja": "\u91cd\u8981\u6027"}, {"en": "consequence", "ja": "\u7d50\u679c, \u91cd\u8981\u3055"}, {"en": "matter", "ja": "\u4e8b\u67c4, \u554f\u984c\uff1b \u91cd\u8981\u3067\u3042\u308b"}, {"en": "count", "ja": "\uff5e\u3092\u6570\u3048\u308b\uff1b \u91cd\u8981\u3067\u3042\u308b"}, {"en": "make a difference", "ja": "\u91cd\u8981\u3067\u3042\u308b"}, {"en": "trivial", "ja": "\u3055\u3055\u3044\u306a, \u3042\u308a\u3075\u308c\u305f"}, {"en": "trifle", "ja": "\u3055\u3055\u3044\u306a\u4e8b, \u304f\u3060\u3089\u306a\u3044\u4e8b"}, {"en": "common", "ja": "\u5171\u901a\u306e, \u3088\u304f\u3042\u308b, \u4e00\u822c\u7684\u306a, \u3042\u308a\u3075\u308c\u305f"}, {"en": "ordinary", "ja": "\u666e\u901a\u306e, \u901a\u5e38\u306e, \u3042\u308a\u3075\u308c\u305f"}, {"en": "familiar", "ja": "(\uff5e\u306b)\u3088\u304f\u77e5\u3089\u308c\u305f\uff1b \u7cbe\u901a\u3057\u3066\u3044\u308b\uff1b \u89aa\u3057\u3044"}, {"en": "emphasize", "ja": "\uff5e\u3092\u5f37\u8abf\u3059\u308b"}, {"en": "stress", "ja": "\uff5e\u3092\u5f37\u8abf\u3059\u308b\uff1b \u30b9\u30c8\u30ec\u30b9, \u91cd\u70b9, \u5f37\u8abf"}, {"en": "neglect", "ja": "\uff5e\u3092(\u3046\u3063\u304b\u308a)\u6020\u308b, \uff5e\u3092\u7121\u8996\u3059\u308b"}, {"en": "ignore", "ja": "\uff5e\u3092\u7121\u8996\u3059\u308b, \uff5e\u3092\u77e5\u3089\u306a\u3044\u3075\u308a\u3092\u3059\u308b"}, {"en": "eminent", "ja": "\u8457\u540d\u306a"}, {"en": "prominent", "ja": "\u76ee\u7acb\u3063\u305f\uff1b \u6709\u540d\u306a"}, {"en": "primary", "ja": "\u7b2c1\u306e, \u4e3b\u8981\u306a"}, {"en": "tiny", "ja": "\u3061\u3063\u307d\u3051\u306a"}, {"en": "slight", "ja": "\u308f\u305a\u304b\u306a, \u53d6\u308b\u306b\u8db3\u3089\u306a\u3044"}, {"en": "character", "ja": "\u6027\u683c, \u4eba\u683c, \u7279\u5fb4, \u767b\u5834\u4eba\u7269, \u6587\u5b57"}, {"en": "feature", "ja": "(\u76ee\u7acb\u3063\u305f)\u7279\u5fb4, \u9854\u7acb\u3061\uff1b \uff5e\u3092\u7279\u96c6\u3059\u308b"}, {"en": "trait", "ja": "\u7279\u5fb4, \u7279\u8272"}, {"en": "typical", "ja": "\u5178\u578b\u7684\u306a, \u3089\u3057\u3044"}, {"en": "unique", "ja": "\u7279\u6709\u306e, \u72ec\u81ea\u306e\uff1b \u552f\u4e00\u306e"}, {"en": "peculiar", "ja": "\u7279\u6709\u306e\uff1b \u98a8\u5909\u308f\u308a\u306a"}, {"en": "particular", "ja": "\u7279\u5b9a\u306e, \u7279\u5225\u306e"}, {"en": "general", "ja": "\u5168\u822c\u7684\u306a, \u4e00\u822c\u7684\u306a"}, {"en": "specify", "ja": "\uff5e\u3092\u7279\u5b9a\u3059\u308b"}, {"en": "distinguish", "ja": "\uff5e\u3092\u533a\u5225\u3059\u308b, \u898b\u5206\u3051\u308b"}, {"en": "define", "ja": "\uff5e\u3092\u5b9a\u7fa9\u3059\u308b, \u660e\u78ba\u306b\u3059\u308b"}, {"en": "vague", "ja": "\u66d6\u6627\u306a, \u6f20\u7136\u3068\u3057\u305f"}, {"en": "obscure", "ja": "\u4e0d\u660e\u77ad\u306a, \u307c\u3084\u3051\u305f\uff1b \u4e16\u306b\u77e5\u3089\u308c\u3066\u3044\u306a\u3044"}, {"en": "ambiguous", "ja": "\u66d6\u6627\u306a, \u3069\u3061\u3089\u3068\u3082\u3068\u308c\u308b"}, {"en": "obvious", "ja": "\u660e\u767d\u306a"}, {"en": "evident", "ja": "\u660e\u767d\u306a"}, {"en": "apparent", "ja": "\u898b\u305f\u3068\u3053\u308d\u306e, \u660e\u767d\u306a"}, {"en": "respect", "ja": "\u5c0a\u656c, \u5c0a\u91cd, \u70b9, \u4e8b\u9805\uff1b \uff5e\u3092\u5c0a\u656c\u3059\u308b"}, {"en": "aspect", "ja": "\u5074\u9762, \u69d8\u76f8, \u70b9"}, {"en": "detail", "ja": "\u8a73\u7d30"}, {"en": "precise", "ja": "\u6b63\u78ba\u306a"}, {"en": "accurate", "ja": "\u6b63\u78ba\u306a"}, {"en": "structure", "ja": "\u69cb\u9020, \u69cb\u6210, \u9aa8\u683c"}, {"en": "construct", "ja": "\uff5e\u3092\u5efa\u8a2d\u3059\u308b, \u7d44\u307f\u7acb\u3066\u308b"}, {"en": "destroy", "ja": "\uff5e\u3092\u7834\u58ca\u3059\u308b, \u6ec5\u307c\u3059"}, {"en": "architecture", "ja": "\u5efa\u7bc9, \u5efa\u7bc9\u5b66"}, {"en": "constitute", "ja": "\uff5e\u3092\u69cb\u6210\u3059\u308b, \u5360\u3081\u308b\uff1b \u8a2d\u7acb\u3059\u308b"}, {"en": "institute", "ja": "\uff5e(\u6cd5\u5f8b\u30fb\u5236\u5ea6)\u3092\u5236\u5b9a\u3059\u308b\uff1b \u5354\u4f1a, \u7814\u7a76\u6240"}, {"en": "substitute", "ja": "\uff5e\u3092\u4ee3\u7528\u3059\u308b\uff1b \u4ee3\u7528\u54c1, \u4ee3\u7406\u4eba"}, {"en": "stable", "ja": "\u5b89\u5b9a\u3057\u305f"}, {"en": "establish", "ja": "\uff5e\u3092\u8a2d\u7acb\u3059\u308b, \u78ba\u7acb\u3059\u308b"}, {"en": "subject", "ja": "\u79d1\u76ee, \u4e3b\u984c\uff1b \u60a3\u8005\uff1b \u5f93\u5c5e\u3057\u3066\u3044\u308b"}, {"en": "subdue", "ja": "\uff5e\u3092\u5f81\u670d\u3059\u308b, \u652f\u914d\u3059\u308b, \u6291\u3048\u308b"}, {"en": "submit", "ja": "\u670d\u5f93\u3059\u308b, \u8eab\u3092\u4efb\u305b\u308b\uff1b \u3092\u63d0\u51fa\u3059\u308b"}, {"en": "substance", "ja": "\u7269\u8cea\u3001\u5b9f\u4f53"}, {"en": "fundamental", "ja": "\u6839\u672c\u7684\u306a, \u57fa\u790e\u7684\u306a, \u91cd\u8981\u306a"}, {"en": "fund", "ja": "\u8cc7\u91d1, \u57fa\u91d1"}, {"en": "found", "ja": "\uff5e\u3092\u8a2d\u7acb\u3059\u308b"}, {"en": "foundation", "ja": "\u57fa\u76e4, \u57fa\u790e, \u571f\u53f0"}, {"en": "profound", "ja": "\u6df1\u3044, \u6df1\u9060\u306a"}, {"en": "base", "ja": "\u571f\u53f0\u3001\u57fa\u790e"}, {"en": "basis", "ja": "\u57fa\u790e"}, {"en": "ground", "ja": "\u904b\u52d5\u5834, \u5730\u9762, \u6839\u62e0, \u7406\u7531"}, {"en": "superficial", "ja": "\u3046\u308f\u3079\u306e"}, {"en": "shallow", "ja": "\u6d45\u3044\uff1b \u6d45\u306f\u304b\u306a, \u3046\u308f\u3079\u306e"}, {"en": "superb", "ja": "\u3059\u3070\u3089\u3057\u3044, \u898b\u4e8b\u306a"}, {"en": "supervise", "ja": "\uff5e\u3092\u76e3\u8996\u3059\u308b, \u6307\u63ee\u3059\u308b"}, {"en": "superstition", "ja": "\u8ff7\u4fe1"}, {"en": "core", "ja": "\u4e2d\u5fc3, \u6838\u5fc3\uff1b \u82af"}, {"en": "surface", "ja": "\u8868\u9762, \u8868\u5c64"}, {"en": "internal", "ja": "\u5185\u9762\u306e, \u5185\u5074\u306e"}, {"en": "external", "ja": "\u5916\u5074\u306e"}, {"en": "concentrate", "ja": "\u96c6\u4e2d\u3059\u308b\uff1b \uff5e\u3092\u96c6\u4e2d\u3055\u305b\u308b"}, {"en": "focus", "ja": "\u96c6\u4e2d\u3059\u308b, \u91cd\u70b9\u3092\u7f6e\u304f\uff1b \u7126\u70b9"}, {"en": "compose", "ja": "\uff5e\u3092\u69cb\u6210\u3059\u308b\uff1b \u4f5c\u66f2\u30fb\u4f5c\u6587\u3059\u308b"}, {"en": "consist", "ja": "\u6210\u308b, \u3042\u308b, \u5b58\u5728\u3059\u308b"}, {"en": "organize", "ja": "\uff5e\u3092\u7d44\u7e54\u3059\u308b"}, {"en": "element", "ja": "\u8981\u7d20, \u5143\u7d20"}, {"en": "component", "ja": "\u69cb\u6210\u8981\u7d20, \u90e8\u5206"}, {"en": "complex", "ja": "\u8907\u96d1\u306a, \u8907\u5408\u306e"}, {"en": "complicated", "ja": "\u8907\u96d1\u306a"}, {"en": "reveal", "ja": "\uff5e\u3092\u660e\u3089\u304b\u306b\u3059\u308b, \u66b4\u9732\u3059\u308b"}, {"en": "conceal", "ja": "\uff5e\u3092\u96a0\u3059"}, {"en": "expose", "ja": "\uff5e\u3092\u3055\u3089\u3059"}, {"en": "impose", "ja": "\uff5e\u3092\u8ab2\u3059, \u62bc\u3057\u3064\u3051\u308b"}, {"en": "divide", "ja": "\uff5e\u3092\u5206\u5272\u3059\u308b"}, {"en": "diffuse", "ja": "\uff5e\u3092\u307e\u304d\u6563\u3089\u3059, \u5206\u6563\u3059\u308b\uff1b \u62e1\u6563\u3059\u308b"}, {"en": "scatter", "ja": "\uff5e\u3092\u307e\u304d\u6563\u3089\u3059"}, {"en": "spread", "ja": "\u5e83\u304c\u308b, \u666e\u53ca\u3059\u308b"}, {"en": "bend", "ja": "\uff5e\u3092\u66f2\u3052\u308b"}, {"en": "incline", "ja": "\uff5e\u3092\u50be\u3051\u308b, \u6c17\u6301\u3061\u306b\u3055\u305b\u308b"}, {"en": "lean", "ja": "\u5bc4\u308a\u304b\u304b\u308b, \u3082\u305f\u308c\u308b"}, {"en": "erect", "ja": "\uff5e\u3092\u76f4\u7acb\u3055\u305b\u308b, \u5efa\u3066\u308b\uff1b \u76f4\u7acb\u3057\u305f"}, {"en": "emit", "ja": "\uff5e\u3092\u653e\u51fa\u3059\u308b, \u6392\u51fa\u3059\u308b"}, {"en": "absorb", "ja": "\uff5e\u3092\u5438\u53ce\u3059\u308b"}, {"en": "attract", "ja": "\uff5e\u3092\u60f9\u304d\u4ed8\u3051\u308b, \u9b45\u4e86\u3059\u308b"}, {"en": "extract", "ja": "\uff5e\u3092\u629c\u304d\u51fa\u3059, \u62bd\u51fa\u3059\u308b"}, {"en": "aim", "ja": "\u76ee\u6a19, \u76ee\u7684\uff1b \u72d9\u3046, \u76ee\u6a19\u3068\u3059\u308b"}, {"en": "penetrate", "ja": "\uff5e\u3092\u8cab\u901a\u3059\u308b, \uff5e\u306b\u6d78\u900f\u3059\u308b"}, {"en": "thrust", "ja": "\uff5e\u3092\u62bc\u3057\u4ed8\u3051\u308b, \u7a81\u3063\u8fbc\u3080"}, {"en": "insert", "ja": "\uff5e\u3092\u633f\u5165\u3059\u308b"}, {"en": "grasp", "ja": "\uff5e\u3092\u63b4\u3080, \u63e1\u308b\uff1b \u7406\u89e3\u3059\u308b"}, {"en": "grab", "ja": "\uff5e\u3092\u63b4\u3080"}, {"en": "seize", "ja": "\uff5e\u3092\u63b4\u3080, (\u611f\u60c5\u306a\u3069\u304c)\u3092\u8972\u3046\uff1b \u62bc\u53ce\u3059\u308b"}, {"en": "drag", "ja": "\uff5e\u3092\u5f15\u304d\u305a\u308b"}, {"en": "cling", "ja": "\u3057\u304c\u307f\u3064\u304f, \u56fa\u57f7\u3059\u308b"}, {"en": "stick", "ja": "\u68d2\uff1b \u304f\u3063\u3064\u304f, \u56fa\u57f7\u3059\u308b"}, {"en": "attach", "ja": "\uff5e\u3092\u304f\u3063\u3064\u3051\u308b\uff1b \u611b\u7740\u3092\u6301\u305f\u305b\u308b"}, {"en": "imitate", "ja": "\uff5e\u3092\u771f\u4f3c\u308b"}, {"en": "fold", "ja": "\uff5e\u3092\u6298\u308a\u7573\u3080"}, {"en": "tear", "ja": "\uff5e\u3092\u5f15\u304d\u88c2\u304f"}, {"en": "mold", "ja": "\uff5e\u3092\u304b\u305f\u3069\u308b, \u5f62\u6210\u3059\u308b"}, {"en": "distort", "ja": "\uff5e\u3092\u6b6a\u3081\u308b"}, {"en": "expand", "ja": "\uff5e\u3092\u62e1\u5927\u3059\u308b\uff1b \u81a8\u5f35\u3059\u308b"}, {"en": "shrink", "ja": "\u7e2e\u3080"}, {"en": "swell", "ja": "\u81a8\u3089\u3080"}, {"en": "assemble", "ja": "\uff5e\u3092\u96c6\u3081\u308b, \u7d44\u307f\u7acb\u3066\u308b"}, {"en": "collect", "ja": "\uff5e\u3092\u96c6\u3081\u308b\uff1b \u5fb4\u53ce\u3059\u308b"}, {"en": "cram", "ja": "\uff5e\u3092\u8a70\u3081\u8fbc\u3080"}, {"en": "rotate", "ja": "\uff5e\u3092\u56de\u8ee2\u3059\u308b\uff1b \u56de\u8ee2\u3059\u308b"}, {"en": "twist", "ja": "\uff5e\u3092\u3072\u306d\u308b"}, {"en": "upset", "ja": "\uff5e\u3092\u3072\u3063\u304f\u308a\u8fd4\u3059, \u52d5\u63fa\u3055\u305b\u308b\uff1b \u6012\u3063\u305f"}, {"en": "stir", "ja": "\uff5e\u3092\u304b\u304d\u56de\u3059\uff1b \u9a12\u4e71"}, {"en": "explode", "ja": "\u7206\u767a\u3059\u308b"}, {"en": "burst", "ja": "\u7206\u767a\u3059\u308b"}, {"en": "melt", "ja": "\u6eb6\u3051\u308b\uff1b \uff5e\u3092\u6eb6\u304b\u3059"}, {"en": "leak", "ja": "\u6f0f\u308c\u308b\uff1b \uff5e\u3092\u6f0f\u3089\u3059"}];
+  "use strict";
 
-    function shuffleArray(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
+  // ============================================================
+  // 単語データ（UTF-8。Section 1〜3 は元サイトの表から抽出したもの）
+  // ============================================================
+  const DEFAULT_SECTIONS = [
+    { name: "Section 1：重要・特徴・明確さ", words: [
+      ["vital", "(～にとって)非常に重要な； 生命の"],
+      ["vivid", "生き生きとした, 鮮やかな"],
+      ["revive", "～を生き返らせる, 生き返る"],
+      ["essential", "(～にとって)重要な, 必要不可欠な； 本質的な"],
+      ["indispensable", "(～にとって)重要な, 必要不可欠な"],
+      ["crucial", "決定的な, 極めて重要な"],
+      ["significance", "重要性"],
+      ["consequence", "結果, 重要さ"],
+      ["matter", "事柄, 問題； 重要である"],
+      ["count", "～を数える； 重要である"],
+      ["make a difference", "重要である"],
+      ["trivial", "ささいな, ありふれた"],
+      ["trifle", "ささいな事, くだらない事"],
+      ["common", "共通の, よくある, 一般的な, ありふれた"],
+      ["ordinary", "普通の, 通常の, ありふれた"],
+      ["familiar", "(～に)よく知られた； 精通している； 親しい"],
+      ["emphasize", "～を強調する"],
+      ["stress", "～を強調する； ストレス, 重点, 強調"],
+      ["neglect", "～を(うっかり)怠る, ～を無視する"],
+      ["ignore", "～を無視する, ～を知らないふりをする"],
+      ["eminent", "著名な"],
+      ["prominent", "目立った； 有名な"],
+      ["primary", "第1の, 主要な"],
+      ["tiny", "ちっぽけな"],
+      ["slight", "わずかな, 取るに足らない"],
+      ["character", "性格, 人格, 特徴, 登場人物, 文字"],
+      ["feature", "(目立った)特徴, 顔立ち； ～を特集する"],
+      ["trait", "特徴, 特色"],
+      ["typical", "典型的な, らしい"],
+      ["unique", "特有の, 独自の； 唯一の"],
+      ["peculiar", "特有の； 風変わりな"],
+      ["particular", "特定の, 特別の"],
+      ["general", "全般的な, 一般的な"],
+      ["specify", "～を特定する"],
+      ["distinguish", "～を区別する, 見分ける"],
+      ["define", "～を定義する, 明確にする"],
+      ["vague", "曖昧な, 漠然とした"],
+      ["obscure", "不明瞭な, ぼやけた； 世に知られていない"],
+      ["ambiguous", "曖昧な, どちらともとれる"],
+      ["obvious", "明白な"],
+      ["evident", "明白な"],
+      ["apparent", "見たところの, 明白な"],
+      ["respect", "尊敬, 尊重, 点, 事項； ～を尊敬する"],
+      ["aspect", "側面, 様相, 点"],
+      ["detail", "詳細"],
+      ["precise", "正確な"],
+      ["accurate", "正確な"]
+    ] },
+    { name: "Section 2：構造・基礎・構成", words: [
+      ["structure", "構造, 構成, 骨格"],
+      ["construct", "～を建設する, 組み立てる"],
+      ["destroy", "～を破壊する, 滅ぼす"],
+      ["architecture", "建築, 建築学"],
+      ["constitute", "～を構成する, 占める； 設立する"],
+      ["institute", "～(法律・制度)を制定する； 協会, 研究所"],
+      ["substitute", "～を代用する； 代用品, 代理人"],
+      ["stable", "安定した"],
+      ["establish", "～を設立する, 確立する"],
+      ["subject", "科目, 主題； 患者； 従属している"],
+      ["subdue", "～を征服する, 支配する, 抑える"],
+      ["submit", "服従する, 身を任せる； を提出する"],
+      ["substance", "物質、実体"],
+      ["fundamental", "根本的な, 基礎的な, 重要な"],
+      ["fund", "資金, 基金"],
+      ["found", "～を設立する"],
+      ["foundation", "基盤, 基礎, 土台"],
+      ["profound", "深い, 深遠な"],
+      ["base", "土台、基礎"],
+      ["basis", "基礎"],
+      ["ground", "運動場, 地面, 根拠, 理由"],
+      ["superficial", "うわべの"],
+      ["shallow", "浅い； 浅はかな, うわべの"],
+      ["superb", "すばらしい, 見事な"],
+      ["supervise", "～を監視する, 指揮する"],
+      ["superstition", "迷信"],
+      ["core", "中心, 核心； 芯"],
+      ["surface", "表面, 表層"],
+      ["internal", "内面の, 内側の"],
+      ["external", "外側の"],
+      ["concentrate", "集中する； ～を集中させる"],
+      ["focus", "集中する, 重点を置く； 焦点"],
+      ["compose", "～を構成する； 作曲・作文する"],
+      ["consist", "成る, ある, 存在する"],
+      ["organize", "～を組織する"],
+      ["element", "要素, 元素"],
+      ["component", "構成要素, 部分"],
+      ["complex", "複雑な, 複合の"],
+      ["complicated", "複雑な"]
+    ] },
+    { name: "Section 3：動作・変形", words: [
+      ["reveal", "～を明らかにする, 暴露する"],
+      ["conceal", "～を隠す"],
+      ["expose", "～をさらす"],
+      ["impose", "～を課す, 押しつける"],
+      ["divide", "～を分割する"],
+      ["diffuse", "～をまき散らす, 分散する； 拡散する"],
+      ["scatter", "～をまき散らす"],
+      ["spread", "広がる, 普及する"],
+      ["bend", "～を曲げる"],
+      ["incline", "～を傾ける, 気持ちにさせる"],
+      ["lean", "寄りかかる, もたれる"],
+      ["erect", "～を直立させる, 建てる； 直立した"],
+      ["emit", "～を放出する, 排出する"],
+      ["absorb", "～を吸収する"],
+      ["attract", "～を惹き付ける, 魅了する"],
+      ["extract", "～を抜き出す, 抽出する"],
+      ["aim", "目標, 目的； 狙う, 目標とする"],
+      ["penetrate", "～を貫通する, ～に浸透する"],
+      ["thrust", "～を押し付ける, 突っ込む"],
+      ["insert", "～を挿入する"],
+      ["grasp", "～を掴む, 握る； 理解する"],
+      ["grab", "～を掴む"],
+      ["seize", "～を掴む, (感情などが)を襲う； 押収する"],
+      ["drag", "～を引きずる"],
+      ["cling", "しがみつく, 固執する"],
+      ["stick", "棒； くっつく, 固執する"],
+      ["attach", "～をくっつける； 愛着を持たせる"],
+      ["imitate", "～を真似る"],
+      ["fold", "～を折り畳む"],
+      ["tear", "～を引き裂く"],
+      ["mold", "～をかたどる, 形成する"],
+      ["distort", "～を歪める"],
+      ["expand", "～を拡大する； 膨張する"],
+      ["shrink", "縮む"],
+      ["swell", "膨らむ"],
+      ["assemble", "～を集める, 組み立てる"],
+      ["collect", "～を集める； 徴収する"],
+      ["cram", "～を詰め込む"],
+      ["rotate", "～を回転する； 回転する"],
+      ["twist", "～をひねる"],
+      ["upset", "～をひっくり返す, 動揺させる； 怒った"],
+      ["stir", "～をかき回す； 騒乱"],
+      ["explode", "爆発する"],
+      ["burst", "爆発する"],
+      ["melt", "溶ける； ～を溶かす"],
+      ["leak", "漏れる； ～を漏らす"]
+    ] },
+    { name: "Section 4：増減・変化（補充）", words: [
+      ["increase", "増える； ～を増やす"],
+      ["decrease", "減る； ～を減らす"],
+      ["decline", "減少する, 衰える； ～を断る"],
+      ["diminish", "減少する； ～を減らす"],
+      ["reduce", "～を減らす, 縮小する"],
+      ["multiply", "増える, 繁殖する； ～を掛ける"],
+      ["accelerate", "～を加速する； 速まる"],
+      ["enhance", "～を高める, 向上させる"],
+      ["reinforce", "～を強化する, 補強する"],
+      ["strengthen", "～を強くする； 強くなる"],
+      ["weaken", "～を弱める； 弱まる"],
+      ["transform", "～を(すっかり)変える, 変形させる"],
+      ["convert", "～を転換する, 改宗させる"],
+      ["alter", "～を(部分的に)変える"],
+      ["modify", "～を修正する, 変更する"],
+      ["adjust", "～を調整する； 適応する"],
+      ["adapt", "～を適応させる； 順応する"],
+      ["evolve", "進化する, 発展する"],
+      ["vary", "さまざまである, 変わる"],
+      ["variable", "変わりやすい； 変数"],
+      ["constant", "絶え間ない, 一定の"],
+      ["steady", "安定した, 着実な"],
+      ["gradual", "徐々の, ゆるやかな"],
+      ["rapid", "急速な"],
+      ["abrupt", "突然の, 不意の"],
+      ["restore", "～を回復させる, 修復する"],
+      ["fluctuate", "変動する, 上下する"],
+      ["exceed", "～を超える, 上回る"],
+      ["surpass", "～をしのぐ, 上回る"],
+      ["deteriorate", "悪化する"]
+    ] },
+    { name: "Section 5：感情（補充）", words: [
+      ["emotion", "感情"],
+      ["passion", "情熱, 激情"],
+      ["delight", "大喜び； ～を大いに喜ばせる"],
+      ["grief", "深い悲しみ"],
+      ["sorrow", "悲しみ"],
+      ["despair", "絶望； 絶望する"],
+      ["anxiety", "不安, 心配"],
+      ["anxious", "心配して； 切望して"],
+      ["eager", "熱望して, 熱心な"],
+      ["enthusiasm", "熱意, 熱狂"],
+      ["thrill", "ぞくぞくする感じ； ～をわくわくさせる"],
+      ["astonish", "～を(非常に)驚かせる"],
+      ["amaze", "～をびっくりさせる"],
+      ["startle", "～をびっくりさせる, ぎょっとさせる"],
+      ["frighten", "～を怖がらせる"],
+      ["terrify", "～を恐れさせる, おびえさせる"],
+      ["horror", "恐怖, 嫌悪"],
+      ["dread", "～をひどく恐れる； 恐怖"],
+      ["relieve", "～を安心させる, (苦痛など)を和らげる"],
+      ["comfort", "慰め, 快適さ； ～を慰める"],
+      ["console", "～を慰める"],
+      ["content", "満足して； 中身, 内容"],
+      ["frustrate", "～を挫折させる, いらだたせる"],
+      ["irritate", "～をいらいらさせる"],
+      ["annoy", "～をいらいらさせる, 悩ませる"],
+      ["bother", "～を悩ませる； わざわざ～する"],
+      ["embarrass", "～を当惑させる, 恥ずかしい思いをさせる"],
+      ["ashamed", "(～を)恥じて"],
+      ["regret", "～を後悔する； 後悔"],
+      ["envy", "～をうらやむ； 嫉妬"],
+      ["jealous", "嫉妬して, ねたんで"],
+      ["sympathy", "同情, 共感"],
+      ["compassion", "深い同情, 思いやり"],
+      ["temper", "気分, 気性； 怒り"],
+      ["mood", "気分, 機嫌"]
+    ] },
+    { name: "Section 6：思考・判断（補充）", words: [
+      ["consider", "～をよく考える, ～とみなす"],
+      ["contemplate", "～を熟考する"],
+      ["ponder", "～を熟考する"],
+      ["reflect", "～を反射する, 反映する； 熟考する"],
+      ["speculate", "推測する； 投機する"],
+      ["assume", "～を当然と思う, 仮定する； (責任)を引き受ける"],
+      ["presume", "～と推定する"],
+      ["suppose", "～と思う, 仮定する"],
+      ["infer", "～を推論する, 推測する"],
+      ["deduce", "～を推論する, 演繹する"],
+      ["conclude", "～と結論づける"],
+      ["evaluate", "～を評価する"],
+      ["assess", "～を評価する, 査定する"],
+      ["estimate", "～を見積もる； 見積もり"],
+      ["perceive", "～を知覚する, 認識する"],
+      ["recognize", "～を認識する, 認める"],
+      ["acknowledge", "～を(事実だと)認める"],
+      ["admit", "～を(しぶしぶ)認める"],
+      ["deny", "～を否定する"],
+      ["doubt", "～を疑う, ～ではないと思う； 疑い"],
+      ["suspect", "～ではないかと思う； 容疑者"],
+      ["convince", "～を確信させる, 納得させる"],
+      ["persuade", "～を説得する"],
+      ["determine", "～を決定する, 特定する"],
+      ["resolve", "～を決意する； ～を解決する"],
+      ["hesitate", "ためらう"],
+      ["intend", "～するつもりである, 意図する"],
+      ["conscious", "意識している, 自覚している"],
+      ["deliberate", "意図的な, 慎重な； 熟考する"],
+      ["rational", "合理的な, 理性的な"],
+      ["reasonable", "分別のある, (値段が)手ごろな"],
+      ["logical", "論理的な"],
+      ["absurd", "ばかげた, 不合理な"],
+      ["skeptical", "懐疑的な"],
+      ["prejudice", "偏見"]
+    ] },
+    { name: "Section 7：伝達・主張（補充）", words: [
+      ["convey", "～を伝える, 運ぶ"],
+      ["transmit", "～を伝える, 送信する, 伝染させる"],
+      ["inform", "～に知らせる"],
+      ["announce", "～を発表する, 公表する"],
+      ["declare", "～を宣言する, 断言する"],
+      ["state", "～をはっきり述べる； 状態； 国家, 州"],
+      ["mention", "～に言及する, ～を口にする"],
+      ["refer", "言及する, 参照する"],
+      ["imply", "～を暗示する, ほのめかす"],
+      ["indicate", "～を示す, 指摘する"],
+      ["demonstrate", "～を証明する, 実演する"],
+      ["describe", "～を描写する, 説明する"],
+      ["interpret", "～を解釈する, 通訳する"],
+      ["translate", "～を翻訳する"],
+      ["argue", "～と主張する； 議論する"],
+      ["claim", "～と主張する； 主張, 要求"],
+      ["insist", "～と強く主張する, 言い張る"],
+      ["assert", "～と断言する, 主張する"],
+      ["contend", "～と主張する； 争う"],
+      ["debate", "討論； ～を討論する"],
+      ["dispute", "論争； ～に異議を唱える"],
+      ["negotiate", "交渉する"],
+      ["consult", "～に相談する, (辞書など)を調べる"],
+      ["request", "～を要請する； 要請"],
+      ["demand", "～を要求する； 要求, 需要"],
+      ["beg", "～を懇願する"],
+      ["appeal", "訴える, 懇願する； 魅力"],
+      ["respond", "応答する, 反応する"],
+      ["remark", "～と述べる； 発言, 意見"],
+      ["whisper", "ささやく； ささやき"],
+      ["murmur", "つぶやく, 小声で言う"],
+      ["utter", "～を口に出す； 完全な, まったくの"],
+      ["exaggerate", "～を誇張する"],
+      ["contradict", "～と矛盾する, ～に反論する"],
+      ["confess", "～を告白する, 白状する"]
+    ] },
+    { name: "Section 8：社会・制度（補充）", words: [
+      ["society", "社会"],
+      ["community", "共同体, 地域社会"],
+      ["individual", "個人； 個々の"],
+      ["citizen", "市民, 国民"],
+      ["civil", "市民の, 民間の"],
+      ["civilization", "文明"],
+      ["custom", "慣習, 習慣"],
+      ["tradition", "伝統"],
+      ["convention", "慣習, しきたり； 大会"],
+      ["institution", "制度, 機関, 施設"],
+      ["government", "政府, 政治"],
+      ["policy", "政策, 方針"],
+      ["politics", "政治, 政治学"],
+      ["authority", "権威, 権限； 当局"],
+      ["administration", "行政, 管理, 政権"],
+      ["democracy", "民主主義"],
+      ["liberty", "自由"],
+      ["justice", "正義, 公正, 司法"],
+      ["legal", "法律の, 合法的な"],
+      ["illegal", "違法の"],
+      ["legislation", "立法, 法律"],
+      ["regulate", "～を規制する, 調整する"],
+      ["prohibit", "～を禁止する"],
+      ["forbid", "～を禁じる"],
+      ["permit", "～を許可する； 許可証"],
+      ["obligation", "義務"],
+      ["duty", "義務, 職務； 関税"],
+      ["privilege", "特権"],
+      ["welfare", "福祉, 幸福"],
+      ["vote", "投票する； 投票, 票"],
+      ["election", "選挙"],
+      ["candidate", "候補者, 志願者"],
+      ["ethnic", "民族の"],
+      ["race", "人種, 民族； 競争"],
+      ["discrimination", "差別"]
+    ] },
+    { name: "Section 9：経済・仕事（補充）", words: [
+      ["economy", "経済； 節約"],
+      ["finance", "財政, 金融； ～に資金を提供する"],
+      ["commerce", "商業, 通商"],
+      ["trade", "貿易, 取引； 取引する"],
+      ["industry", "産業, 工業； 勤勉"],
+      ["agriculture", "農業"],
+      ["manufacture", "～を製造する； 製造"],
+      ["consume", "～を消費する"],
+      ["purchase", "～を購入する； 購入"],
+      ["afford", "～する(経済的・時間的)余裕がある"],
+      ["budget", "予算"],
+      ["profit", "利益, もうけ"],
+      ["benefit", "利益, 恩恵； ～のためになる"],
+      ["debt", "借金, 負債"],
+      ["loan", "貸付金, ローン"],
+      ["invest", "～を投資する"],
+      ["wage", "賃金"],
+      ["salary", "給料"],
+      ["income", "収入, 所得"],
+      ["wealth", "富, 財産"],
+      ["poverty", "貧困"],
+      ["prosperity", "繁栄"],
+      ["employ", "～を雇う, 使用する"],
+      ["hire", "～を雇う, 賃借りする"],
+      ["occupation", "職業； 占領"],
+      ["profession", "(専門的な)職業"],
+      ["career", "経歴, 職業"],
+      ["retire", "退職する, 引退する"],
+      ["resign", "辞任する, 辞職する"],
+      ["promote", "～を昇進させる, 促進する"],
+      ["colleague", "同僚"],
+      ["client", "顧客, 依頼人"],
+      ["enterprise", "企業； 事業"],
+      ["commodity", "商品, 日用品"],
+      ["currency", "通貨"]
+    ] },
+    { name: "Section 10：科学・研究（補充）", words: [
+      ["experiment", "実験； 実験する"],
+      ["laboratory", "実験室, 研究室"],
+      ["hypothesis", "仮説"],
+      ["theory", "理論, 学説"],
+      ["evidence", "証拠"],
+      ["proof", "証明, 証拠"],
+      ["analyze", "～を分析する"],
+      ["analysis", "分析"],
+      ["investigate", "～を調査する"],
+      ["examine", "～を調べる, 検査する"],
+      ["observe", "～を観察する； (規則)を守る"],
+      ["phenomenon", "現象"],
+      ["statistics", "統計, 統計学"],
+      ["measure", "～を測る； 対策, 手段"],
+      ["calculate", "～を計算する"],
+      ["device", "装置, 工夫"],
+      ["instrument", "器具, 楽器"],
+      ["technique", "技術, 技法"],
+      ["invent", "～を発明する"],
+      ["innovation", "革新, 新機軸"],
+      ["artificial", "人工の"],
+      ["efficient", "効率的な, 有能な"],
+      ["function", "機能； 機能する"],
+      ["operate", "作動する； ～を操作する； 手術する"],
+      ["mechanism", "仕組み, 機構"],
+      ["physics", "物理学"],
+      ["chemistry", "化学"],
+      ["biology", "生物学"],
+      ["astronomy", "天文学"],
+      ["gravity", "重力； 重大さ"],
+      ["molecule", "分子"],
+      ["particle", "粒子, 微粒子"],
+      ["orbit", "軌道"],
+      ["equation", "方程式, 等式"],
+      ["verify", "～を検証する, 確認する"]
+    ] },
+    { name: "Section 11：身体・健康（補充）", words: [
+      ["physical", "身体の, 物理的な"],
+      ["mental", "精神の, 心の"],
+      ["disease", "病気"],
+      ["symptom", "症状, 兆候"],
+      ["diagnose", "～を診断する"],
+      ["treatment", "治療, 取り扱い"],
+      ["cure", "～を治す； 治療法"],
+      ["heal", "～を癒やす； 治る"],
+      ["remedy", "治療法, 救済策"],
+      ["physician", "医師, 内科医"],
+      ["surgeon", "外科医"],
+      ["surgery", "手術, 外科"],
+      ["patient", "患者； 忍耐強い"],
+      ["injure", "～を傷つける, 痛める"],
+      ["wound", "傷, 負傷； ～を負傷させる"],
+      ["ache", "痛み； 痛む"],
+      ["fever", "熱, 発熱"],
+      ["fatigue", "疲労"],
+      ["exhausted", "疲れ果てた"],
+      ["recover", "回復する, ～を取り戻す"],
+      ["nutrition", "栄養"],
+      ["digest", "～を消化する"],
+      ["breathe", "呼吸する"],
+      ["muscle", "筋肉"],
+      ["nerve", "神経； 度胸"],
+      ["organ", "臓器, 器官； オルガン"],
+      ["cell", "細胞； 独房"],
+      ["gene", "遺伝子"],
+      ["heredity", "遺伝"],
+      ["immune", "免疫の, 免疫がある"],
+      ["infection", "感染, 伝染"],
+      ["epidemic", "伝染病, 流行"],
+      ["vaccine", "ワクチン"],
+      ["pregnant", "妊娠して"],
+      ["obesity", "肥満"]
+    ] },
+    { name: "Section 12：自然・環境（補充）", words: [
+      ["environment", "環境"],
+      ["climate", "気候"],
+      ["atmosphere", "大気； 雰囲気"],
+      ["pollution", "汚染, 公害"],
+      ["contaminate", "～を汚染する"],
+      ["preserve", "～を保存する, 保護する"],
+      ["conserve", "～を保護する, 節約する"],
+      ["extinct", "絶滅した"],
+      ["species", "(生物の)種"],
+      ["creature", "生き物, 生物"],
+      ["wildlife", "野生生物"],
+      ["habitat", "生息地"],
+      ["ecosystem", "生態系"],
+      ["resource", "資源"],
+      ["fuel", "燃料"],
+      ["mineral", "鉱物"],
+      ["soil", "土壌, 土"],
+      ["drought", "干ばつ"],
+      ["flood", "洪水； 氾濫する"],
+      ["earthquake", "地震"],
+      ["volcano", "火山"],
+      ["disaster", "災害, 惨事"],
+      ["catastrophe", "大災害, 大惨事"],
+      ["tide", "潮, 潮流"],
+      ["current", "流れ, 電流； 現在の"],
+      ["continent", "大陸"],
+      ["desert", "砂漠； ～を見捨てる"],
+      ["coast", "海岸, 沿岸"],
+      ["horizon", "地平線, 水平線； 視野"],
+      ["latitude", "緯度"],
+      ["altitude", "高度, 標高"],
+      ["geography", "地理, 地理学"],
+      ["landscape", "風景, 景色"],
+      ["glacier", "氷河"],
+      ["radiation", "放射線, 放射"]
+    ] },
+    { name: "Section 13：時間・程度（補充）", words: [
+      ["instant", "瞬間； 即座の"],
+      ["immediate", "即座の, 直接の"],
+      ["temporary", "一時的な, 仮の"],
+      ["permanent", "永続的な, 常設の"],
+      ["eternal", "永遠の"],
+      ["previous", "以前の, 前の"],
+      ["former", "前の, 元の； 前者"],
+      ["latter", "後者； 後半の"],
+      ["subsequent", "その後の, 次の"],
+      ["simultaneous", "同時の"],
+      ["frequent", "頻繁な"],
+      ["occasionally", "時々"],
+      ["rarely", "めったに～ない"],
+      ["seldom", "めったに～ない"],
+      ["scarcely", "ほとんど～ない"],
+      ["barely", "かろうじて, ほとんど～ない"],
+      ["annual", "毎年の, 年1回の"],
+      ["decade", "10年間"],
+      ["era", "時代"],
+      ["duration", "継続期間"],
+      ["delay", "～を遅らせる； 遅れ"],
+      ["postpone", "～を延期する"],
+      ["punctual", "時間を守る"],
+      ["urgent", "緊急の"],
+      ["prompt", "迅速な； ～を促す"],
+      ["contemporary", "現代の； 同時代の"],
+      ["ancient", "古代の"],
+      ["primitive", "原始的な"],
+      ["medieval", "中世の"],
+      ["ultimate", "究極の, 最終の"]
+    ] },
+    { name: "Section 14：頻出熟語（補充）", words: [
+      ["look forward to", "～を楽しみに待つ"],
+      ["give up", "～をあきらめる, やめる"],
+      ["put off", "～を延期する"],
+      ["carry out", "～を実行する"],
+      ["bring about", "～を引き起こす"],
+      ["come across", "～に偶然出会う, ～を偶然見つける"],
+      ["come up with", "～を思いつく"],
+      ["figure out", "～を理解する, 解決する"],
+      ["find out", "～を見つけ出す, 知る"],
+      ["get along with", "～とうまくやっていく"],
+      ["get over", "～を克服する, ～から回復する"],
+      ["get rid of", "～を取り除く"],
+      ["keep up with", "～に遅れずについていく"],
+      ["look up to", "～を尊敬する"],
+      ["look down on", "～を見下す"],
+      ["make up for", "～を埋め合わせる"],
+      ["put up with", "～を我慢する"],
+      ["run out of", "～を使い果たす"],
+      ["take after", "～に似ている"],
+      ["take over", "～を引き継ぐ"],
+      ["take part in", "～に参加する"],
+      ["turn down", "～を断る； (音量など)を下げる"],
+      ["turn out", "～だと判明する"],
+      ["account for", "～を説明する； ～の割合を占める"],
+      ["deal with", "～を処理する, 扱う"],
+      ["depend on", "～に頼る, ～次第である"],
+      ["result in", "～という結果になる"],
+      ["result from", "～に起因する"],
+      ["stand for", "～を表す, 支持する"],
+      ["do away with", "～を廃止する, 取り除く"]
+    ] }
+  ];
+
+  const STORAGE_KEY = "tetuWordSections_v1";
+  let sections = loadSections();
+
+  function loadSections() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length &&
+            parsed.every(s => s && typeof s.name === "string" && Array.isArray(s.words))) {
+          return parsed;
         }
-        return array;
-    }
+      }
+    } catch (e) { /* localStorage不可・破損時はデフォルトを使用 */ }
+    return deepCopy(DEFAULT_SECTIONS);
+  }
 
-    function generateTest() {
-        const count = parseInt(document.getElementById('question-count').value, 10);
-        const type = document.getElementById('question-type').value;
-        
-        if (count < 1 || count > wordData.length) {
-            alert(`問題数は1から${wordData.length}の間で指定してください。`);
-            return;
+  function saveSections() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sections)); } catch (e) { /* 保存不可でも動作継続 */ }
+  }
+
+  function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+  // ============================================================
+  // 出題範囲 UI
+  // ============================================================
+  function renderSectionList() {
+    const box = document.getElementById("section-list");
+    box.innerHTML = "";
+    sections.forEach((sec, i) => {
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = true;
+      cb.dataset.index = i;
+      cb.addEventListener("change", updatePoolInfo);
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(" " + sec.name + " "));
+      const wc = document.createElement("span");
+      wc.className = "wc";
+      wc.textContent = "(" + sec.words.length + "語)";
+      label.appendChild(wc);
+      box.appendChild(label);
+    });
+    updatePoolInfo();
+  }
+
+  function setAllSections(on) {
+    document.querySelectorAll("#section-list input[type=checkbox]").forEach(cb => { cb.checked = on; });
+    updatePoolInfo();
+  }
+
+  function getSelectedPool() {
+    const pool = [];
+    document.querySelectorAll("#section-list input[type=checkbox]").forEach(cb => {
+      if (cb.checked) {
+        const sec = sections[Number(cb.dataset.index)];
+        sec.words.forEach(w => pool.push({ en: w[0], ja: w[1] }));
+      }
+    });
+    return pool;
+  }
+
+  function updatePoolInfo() {
+    const pool = getSelectedPool();
+    const total = sections.reduce((n, s) => n + s.words.length, 0);
+    document.getElementById("pool-info").innerHTML =
+      "選択中：<strong>" + pool.length + "</strong> 語 ／ 全収録 " + total + " 語";
+    const input = document.getElementById("question-count");
+    input.max = Math.max(pool.length, 1);
+  }
+
+  // ============================================================
+  // テスト生成
+  // ============================================================
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function generateTest() {
+    const pool = getSelectedPool();
+    if (pool.length === 0) {
+      alert("出題範囲が選択されていません。セクションを選んでください。");
+      return;
+    }
+    let count = parseInt(document.getElementById("question-count").value, 10);
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > pool.length) {
+      count = pool.length;
+      document.getElementById("question-count").value = count;
+    }
+    const type = document.getElementById("question-type").value;
+    const title = document.getElementById("test-title").value.trim() || "英単語テスト";
+
+    const selected = shuffle(pool.slice()).slice(0, count);
+
+    const questions = selected.map(item => {
+      const enToJa = (type === "en-ja") || (type === "mix" && Math.random() < 0.5);
+      return enToJa
+        ? { q: item.en, a: item.ja }
+        : { q: item.ja, a: item.en };
+    });
+
+    document.getElementById("paper-title").textContent = title;
+    document.getElementById("answer-title").textContent = title + "【解答】";
+    const typeLabel = { "en-ja": "英単語の意味を日本語で答えなさい",
+                        "ja-en": "日本語の意味に合う英単語を書きなさい",
+                        "mix":   "英単語は意味を、日本語は英単語を答えなさい" }[type];
+    document.getElementById("paper-sub").textContent = "全 " + count + " 問 ｜ " + typeLabel;
+    document.getElementById("display-count").textContent = count;
+
+    const testBody = document.getElementById("test-body");
+    const answerBody = document.getElementById("answer-body");
+    testBody.innerHTML = "";
+    answerBody.innerHTML = "";
+
+    questions.forEach((qa, idx) => {
+      const no = idx + 1;
+      testBody.insertAdjacentHTML("beforeend",
+        "<tr><td class='cell-no'>" + no + "</td><td>" + esc(qa.q) + "</td><td class='cell-blank'></td></tr>");
+      answerBody.insertAdjacentHTML("beforeend",
+        "<tr><td class='cell-no'>" + no + "</td><td>" + esc(qa.q) + "</td><td>" + esc(qa.a) + "</td></tr>");
+    });
+
+    document.getElementById("result-area").style.display = "block";
+    document.getElementById("test-paper").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // ============================================================
+  // PDF ダウンロード
+  // ============================================================
+  function downloadPDF() {
+    if (typeof html2pdf === "undefined") {
+      alert("PDFライブラリの読み込みに失敗しました（オフラインの可能性があります）。\n「印刷する」ボタンからブラウザの印刷機能で「PDFに保存」をご利用ください。");
+      return;
+    }
+    const btn = document.getElementById("download-btn");
+    btn.disabled = true;
+    btn.textContent = "PDF作成中…";
+
+    const d = new Date();
+    const stamp = d.getFullYear() +
+      String(d.getMonth() + 1).padStart(2, "0") +
+      String(d.getDate()).padStart(2, "0");
+
+    const opt = {
+      margin: [10, 8, 12, 8],
+      filename: "word-test_" + stamp + ".pdf",
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"] }
+    };
+
+    html2pdf().set(opt).from(document.getElementById("test-paper")).save()
+      .catch(err => {
+        alert("PDFの作成に失敗しました：" + err + "\n「印刷する」ボタンからPDF保存もできます。");
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.textContent = "PDFでダウンロード";
+      });
+  }
+
+  // ============================================================
+  // カスタムデータ取り込み
+  // ============================================================
+  function parseImportText(text) {
+    const result = [];
+    let current = null;
+    let skipped = 0;
+    text.split(/\r?\n/).forEach(line => {
+      const t = line.trim();
+      if (!t) return;
+      const secMatch = t.match(/^(?:##|■|【)\s*(.+?)\s*(?:】)?$/);
+      if (secMatch && !t.includes("\t") && !/^##?\s*$/.test(t)) {
+        current = { name: secMatch[1], words: [] };
+        result.push(current);
+        return;
+      }
+      // タブ優先、なければ最初のカンマ・読点で分割
+      let en, ja;
+      if (t.includes("\t")) {
+        const parts = t.split("\t").map(p => p.trim()).filter(p => p !== "");
+        en = parts[0]; ja = parts.slice(1).join(" ");
+      } else {
+        const m = t.match(/^([A-Za-z][A-Za-z0-9 .'\/()-]*?)\s*[,，、:：]\s*(.+)$/);
+        if (m) { en = m[1].trim(); ja = m[2].trim(); }
+      }
+      if (en && ja) {
+        if (!current) {
+          current = { name: "取り込みデータ", words: [] };
+          result.push(current);
         }
+        current.words.push([en, ja]);
+      } else {
+        skipped++;
+      }
+    });
+    return { sections: result.filter(s => s.words.length > 0), skipped: skipped };
+  }
 
-        // 単語リストをシャッフルして必要な数だけ抽出
-        const shuffled = shuffleArray([...wordData]);
-        const selectedWords = shuffled.slice(0, count);
+  function showImportMsg(msg, ok) {
+    const el = document.getElementById("import-msg");
+    el.textContent = msg;
+    el.className = "import-msg " + (ok ? "ok" : "err");
+  }
 
-        const testBody = document.getElementById('test-body');
-        const answerBody = document.getElementById('answer-body');
-        
-        testBody.innerHTML = '';
-        answerBody.innerHTML = '';
-        
-        document.getElementById('display-count').textContent = count;
-
-        selectedWords.forEach((item, index) => {
-            const no = index + 1;
-            let questionText, answerText;
-
-            if (type === 'en-ja') {
-                questionText = item.en;
-                answerText = item.ja;
-            } else {
-                questionText = item.ja;
-                answerText = item.en;
-            }
-
-            // 問題行作成
-            const trTest = document.createElement('tr');
-            trTest.innerHTML = `
-                <td style="text-align:center;">${no}</td>
-                <td>${questionText}</td>
-                <td></td>
-            `;
-            testBody.appendChild(trTest);
-
-            // 解答行作成
-            const trAns = document.createElement('tr');
-            trAns.innerHTML = `
-                <td style="text-align:center;">${no}</td>
-                <td>${questionText}</td>
-                <td>${answerText}</td>
-            `;
-            answerBody.appendChild(trAns);
-        });
-
-        document.getElementById('test-container').style.display = 'block';
-        document.getElementById('download-btn').style.display = 'block';
+  function importWords(replace) {
+    const text = document.getElementById("import-text").value;
+    const { sections: parsed, skipped } = parseImportText(text);
+    const total = parsed.reduce((n, s) => n + s.words.length, 0);
+    if (total === 0) {
+      showImportMsg("取り込める行が見つかりませんでした。「英単語（タブまたはカンマ）意味」の形式で貼り付けてください。", false);
+      return;
     }
-
-    function downloadPDF() {
-        const element = document.getElementById('test-paper');
-        const opt = {
-            margin:       10,
-            filename:     'word_test.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        // Promise-based API
-        html2pdf().set(opt).from(element).save();
+    if (replace) {
+      sections = parsed;
+    } else {
+      sections = sections.concat(parsed);
     }
+    saveSections();
+    renderSectionList();
+    document.getElementById("import-text").value = "";
+    showImportMsg("✓ " + total + " 語を取り込みました" +
+      (skipped > 0 ? "（" + skipped + " 行はスキップ）" : "") +
+      "。データはこのブラウザに保存されました。", true);
+  }
+
+  function resetWords() {
+    if (!confirm("取り込んだデータを削除して初期収録データに戻します。よろしいですか？")) return;
+    sections = deepCopy(DEFAULT_SECTIONS);
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* noop */ }
+    renderSectionList();
+    showImportMsg("初期データに戻しました。", true);
+  }
+
+  // 初期化
+  renderSectionList();
 </script>
-
 </body>
 </html>
