@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>鉄壁 英単語テストメーカー</title>
-<!-- PDF生成ライブラリ（html2canvasで画像化してPDFに埋め込むため日本語も文字化けしません） -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <style>
   :root {
     --main: #2c5f8a;
@@ -13,6 +13,9 @@
     --accent: #e67e22;
     --bg: #f2f5f9;
     --border: #d5dde6;
+    --ok: #1e7d3c;
+    --ng: #c0392b;
+    --warn: #d68910;
   }
   * { box-sizing: border-box; }
   body {
@@ -23,175 +26,87 @@
     padding: 24px 16px;
     line-height: 1.6;
   }
-  .app {
-    max-width: 860px;
-    margin: 0 auto;
-  }
-  header.app-header {
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  header.app-header h1 {
-    margin: 0 0 4px;
-    color: var(--main-dark);
-    font-size: 26px;
-  }
-  header.app-header p {
-    margin: 0;
-    color: #667;
-    font-size: 13px;
-  }
-  .panel {
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 4px rgba(30,50,80,0.06);
-  }
-  .panel > h2 {
-    margin: 0 0 12px;
-    font-size: 16px;
-    color: var(--main-dark);
-    border-left: 4px solid var(--main);
-    padding-left: 8px;
-  }
-  .section-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 6px 14px;
-    margin-bottom: 10px;
-  }
-  .section-list label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13.5px;
-    cursor: pointer;
-    padding: 3px 4px;
-    border-radius: 5px;
-  }
+  .app { max-width: 900px; margin: 0 auto; }
+  header.app-header { text-align: center; margin-bottom: 18px; }
+  header.app-header h1 { margin: 0 0 4px; color: var(--main-dark); font-size: 26px; }
+  header.app-header p { margin: 0; color: #667; font-size: 13px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border); flex-wrap: wrap; }
+  .tabs button { padding: 12px 18px; border: none; background: transparent; color: #667; font-size: 14px; font-weight: bold; cursor: pointer; border-bottom: 3px solid transparent; transition: all .2s; }
+  .tabs button:hover { color: var(--main); }
+  .tabs button.active { color: var(--main); border-bottom-color: var(--main); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .panel { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(30,50,80,0.06); }
+  .panel > h2 { margin: 0 0 12px; font-size: 16px; color: var(--main-dark); border-left: 4px solid var(--main); padding-left: 8px; }
+  .section-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px 14px; margin-bottom: 10px; }
+  .section-list label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; cursor: pointer; padding: 3px 4px; border-radius: 5px; }
   .section-list label:hover { background: #eef3f8; }
   .section-list .wc { color: #889; font-size: 12px; }
-  .mini-btns { display: flex; gap: 8px; }
-  .mini-btns button {
-    font-size: 12px;
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    background: #fff;
-    border-radius: 5px;
-    cursor: pointer;
-    color: #456;
-  }
+  .mini-btns { display: flex; gap: 8px; margin-top: 8px; }
+  .mini-btns button { font-size: 12px; padding: 4px 10px; border: 1px solid var(--border); background: #fff; border-radius: 5px; cursor: pointer; color: #456; }
   .mini-btns button:hover { background: #eef3f8; }
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: flex-end;
-  }
+  .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; }
   .control-group { display: flex; flex-direction: column; min-width: 140px; }
   .control-group label { font-weight: bold; font-size: 13px; margin-bottom: 4px; color: #345; }
-  select, input[type="number"], input[type="text"] {
-    padding: 8px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-    background: #fff;
-  }
-  .btn {
-    padding: 10px 22px;
-    border: none;
-    border-radius: 6px;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: filter .15s;
-  }
+  select, input[type="number"], input[type="text"] { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: #fff; }
+  .btn { padding: 10px 22px; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: filter .15s; }
   .btn:hover { filter: brightness(1.08); }
   .btn-primary { background: var(--main); color: #fff; }
   .btn-accent { background: var(--accent); color: #fff; }
   .btn-ghost { background: #fff; color: var(--main-dark); border: 1px solid var(--border); }
+  .btn-small { padding: 6px 12px; font-size: 12px; }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .pool-info { font-size: 13px; color: #567; margin-top: 10px; }
   .pool-info strong { color: var(--main-dark); font-size: 15px; }
-
-  /* ===== データ取り込み ===== */
-  details.import-box summary {
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--main-dark);
-  }
-  details.import-box .import-inner { margin-top: 10px; }
-  details.import-box textarea {
-    width: 100%;
-    height: 140px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px;
-    font-size: 13px;
-    font-family: Consolas, Monaco, 'Hiragino Kaku Gothic ProN', Meiryo, monospace;
-    resize: vertical;
-  }
-  .import-note { font-size: 12.5px; color: #667; margin: 6px 0 10px; }
-  .import-note code { background: #eef1f5; padding: 1px 5px; border-radius: 4px; }
-  .import-msg { font-size: 13px; margin-top: 8px; min-height: 1.2em; }
-  .import-msg.ok { color: #1e7d3c; }
-  .import-msg.err { color: #c0392b; }
-
-  /* ===== テスト用紙 ===== */
-  #result-area { display: none; }
-  .paper-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin: 18px 0;
-  }
-  #test-paper {
-    background: #fff;
-    color: #000;
-  }
-  .sheet {
-    padding: 10mm 8mm;
-    background: #fff;
-  }
-  .sheet h2 {
-    text-align: center;
-    margin: 0 0 8px;
-    font-size: 20px;
-    letter-spacing: 2px;
-  }
-  .sheet .test-sub {
-    text-align: center;
-    font-size: 11px;
-    color: #444;
-    margin-bottom: 10px;
-  }
-  .test-info {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 13px;
-    border: 1px solid #000;
-    padding: 8px 12px;
-    margin-bottom: 14px;
-  }
+  .question-card { background: #f9fafb; border: 2px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .question-number { font-size: 12px; color: #889; margin-bottom: 8px; }
+  .question-text { font-size: 20px; font-weight: bold; color: var(--main-dark); margin-bottom: 20px; }
+  .options { display: grid; gap: 10px; }
+  .option-btn { padding: 12px 16px; border: 2px solid var(--border); background: #fff; border-radius: 8px; cursor: pointer; text-align: left; font-size: 14px; transition: all .2s; }
+  .option-btn:hover { border-color: var(--main); background: #eef3f8; }
+  .option-btn.selected { border-color: var(--main); background: #dce8f5; }
+  .option-btn.correct { border-color: var(--ok); background: #d4edda; }
+  .option-btn.incorrect { border-color: var(--ng); background: #f8d7da; }
+  .answer-input { padding: 12px 16px; border: 2px solid var(--border); border-radius: 8px; font-size: 14px; width: 100%; margin-bottom: 10px; }
+  .answer-input:focus { border-color: var(--main); outline: none; }
+  .challenge-nav { display: flex; gap: 10px; justify-content: space-between; margin-top: 20px; }
+  .result-card { background: #f9fafb; border-left: 4px solid var(--ok); border-radius: 6px; padding: 15px; margin-bottom: 12px; }
+  .result-card.incorrect { border-left-color: var(--ng); }
+  .result-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .result-word { font-weight: bold; color: var(--main-dark); }
+  .result-status { font-size: 12px; font-weight: bold; }
+  .result-status.ok { color: var(--ok); }
+  .result-status.ng { color: var(--ng); }
+  .result-detail { font-size: 13px; color: #667; }
+  .progress-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .progress-card { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 15px; text-align: center; }
+  .progress-number { font-size: 28px; font-weight: bold; color: var(--main); }
+  .progress-label { font-size: 12px; color: #667; margin-top: 4px; }
+  .section-progress { margin-bottom: 16px; }
+  .section-progress-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .progress-bar { background: var(--border); border-radius: 10px; height: 20px; overflow: hidden; }
+  .progress-fill { background: var(--ok); height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold; }
+  .review-info { background: #e7f3ff; border-left: 4px solid var(--main); padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; }
+  .review-list { display: grid; gap: 10px; }
+  .review-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .review-word { flex: 1; }
+  .review-word-en { font-weight: bold; font-size: 15px; color: var(--main-dark); }
+  .review-word-ja { font-size: 12px; color: #667; margin-top: 4px; }
+  .review-meta { text-align: right; font-size: 12px; color: #889; }
+  .review-badge { display: inline-block; background: var(--warn); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+  .chart-container { position: relative; height: 300px; margin-bottom: 30px; }
+  .stats-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .stats-table th, .stats-table td { border: 1px solid var(--border); padding: 10px; text-align: left; font-size: 13px; }
+  .stats-table th { background: #f5f5f5; font-weight: bold; }
+  .stats-table tr:hover { background: #f9fafb; }
+  #test-paper { background: #fff; color: #000; }
+  .sheet { padding: 10mm 8mm; background: #fff; }
+  .sheet h2 { text-align: center; margin: 0 0 8px; font-size: 20px; letter-spacing: 2px; }
+  .sheet .test-sub { text-align: center; font-size: 11px; color: #444; margin-bottom: 10px; }
+  .test-info { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; border: 1px solid #000; padding: 8px 12px; margin-bottom: 14px; }
   .test-info .name-line { border-bottom: 1px solid #000; display: inline-block; min-width: 140px; }
-  table.q-table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-  table.q-table th, table.q-table td {
-    border: 1px solid #000;
-    padding: 7px 9px;
-    font-size: 13.5px;
-    vertical-align: middle;
-    word-wrap: break-word;
-  }
+  table.q-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.q-table th, table.q-table td { border: 1px solid #000; padding: 7px 9px; font-size: 13.5px; vertical-align: middle; word-wrap: break-word; }
   table.q-table th { background: #f0f0f0; font-size: 12.5px; }
   table.q-table .col-no { width: 8%; text-align: center; }
   table.q-table .col-q  { width: 46%; }
@@ -200,143 +115,163 @@
   table.q-table td.cell-blank { height: 26px; }
   table.q-table tr { page-break-inside: avoid; }
   .page-break { page-break-before: always; }
-
-  footer.app-footer {
-    text-align: center;
-    font-size: 12px;
-    color: #99a;
-    margin-top: 24px;
-  }
-
-  /* ===== 印刷時はテスト用紙のみ ===== */
+  .paper-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 18px 0; }
+  footer.app-footer { text-align: center; font-size: 12px; color: #99a; margin-top: 24px; }
+  .no-print { display: block; }
+  .msg { padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 13px; }
+  .msg.ok { background: #d4edda; color: var(--ok); }
+  .msg.err { background: #f8d7da; color: var(--ng); }
+  .msg.info { background: #e7f3ff; color: var(--main); }
   @media print {
     body { background: #fff; padding: 0; }
     .no-print { display: none !important; }
     .panel { border: none; box-shadow: none; padding: 0; }
-    #result-area { display: block !important; }
     .sheet { padding: 0; }
   }
 </style>
 </head>
 <body>
 <div class="app">
-
   <header class="app-header no-print">
     <h1>鉄壁 英単語テストメーカー</h1>
-    <p>単語リストからランダムに単語テストを作成し、PDFでダウンロードできます</p>
+    <p>2176語・22セクション | テスト作成 / 挑戦 / 復習 / 進捗追跡</p>
   </header>
-
-  <!-- 出題範囲 -->
-  <div class="panel no-print">
-    <h2>出題範囲</h2>
-    <div class="section-list" id="section-list"></div>
-    <div class="mini-btns">
-      <button type="button" onclick="setAllSections(true)">全て選択</button>
-      <button type="button" onclick="setAllSections(false)">全て解除</button>
-    </div>
-    <div class="pool-info" id="pool-info"></div>
+  <div class="tabs no-print">
+    <button class="tab-btn active" data-tab="create">📝 テスト作成</button>
+    <button class="tab-btn" data-tab="challenge">🎯 テスト挑戦</button>
+    <button class="tab-btn" data-tab="review">🔄 復習</button>
+    <button class="tab-btn" data-tab="progress">📊 進捗</button>
   </div>
 
-  <!-- 出題設定 -->
-  <div class="panel no-print">
-    <h2>テスト設定</h2>
-    <div class="controls">
-      <div class="control-group">
-        <label for="question-count">問題数</label>
-        <input type="number" id="question-count" value="20" min="1">
+  <div class="tab-content active" id="tab-create">
+    <div class="panel">
+      <h2>出題範囲</h2>
+      <div class="section-list" id="section-list"></div>
+      <div class="mini-btns">
+        <button type="button" onclick="setAllSections(true)">全て選択</button>
+        <button type="button" onclick="setAllSections(false)">全て解除</button>
       </div>
-      <div class="control-group">
-        <label for="question-type">出題形式</label>
-        <select id="question-type">
-          <option value="en-ja">英単語 → 日本語の意味</option>
-          <option value="ja-en">日本語の意味 → 英単語</option>
-          <option value="mix">ミックス（英⇄日ランダム）</option>
-        </select>
-      </div>
-      <div class="control-group">
-        <label for="test-title">テスト名（任意）</label>
-        <input type="text" id="test-title" placeholder="英単語テスト">
-      </div>
-      <button class="btn btn-primary" onclick="generateTest()">テストを作成</button>
+      <div class="pool-info" id="pool-info"></div>
     </div>
-  </div>
-
-  <!-- カスタムデータ取り込み -->
-  <div class="panel no-print">
-    <details class="import-box">
-      <summary>単語データの取り込み・編集（サイトの表を貼り付けて差し替え可能）</summary>
-      <div class="import-inner">
-        <p class="import-note">
-          元サイト（ukaru-eigo.com の鉄壁単語リスト）の表をコピーしてそのまま貼り付けると、
-          収録データを差し替え・追加できます。1行につき <code>英単語（タブまたはカンマ）意味</code> の形式です。<br>
-          <code>## セクション名</code> と書いた行を入れると、その行以降をひとつのセクションとして登録します。
-          取り込んだデータはこのブラウザに保存され、次回以降も使えます。
-        </p>
-        <textarea id="import-text" placeholder="例：&#10;## Section 4&#10;vital&#9;(～にとって)非常に重要な&#10;vivid,生き生きとした, 鮮やかな"></textarea>
-        <div class="paper-actions" style="justify-content:flex-start; margin:10px 0 0;">
-          <button class="btn btn-ghost" onclick="importWords(false)">既存データに追加</button>
-          <button class="btn btn-ghost" onclick="importWords(true)">全て差し替え</button>
-          <button class="btn btn-ghost" onclick="resetWords()">初期データに戻す</button>
+    <div class="panel">
+      <h2>テスト設定</h2>
+      <div class="controls">
+        <div class="control-group">
+          <label for="question-count">問題数</label>
+          <input type="number" id="question-count" value="20" min="1">
         </div>
-        <div class="import-msg" id="import-msg"></div>
+        <div class="control-group">
+          <label for="question-type">出題形式</label>
+          <select id="question-type">
+            <option value="en-ja">英単語 → 日本語</option>
+            <option value="ja-en">日本語 → 英単語</option>
+            <option value="mix">ミックス</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="test-title">テスト名</label>
+          <input type="text" id="test-title" placeholder="英単語テスト">
+        </div>
+        <button class="btn btn-primary" onclick="startChallenge()">🎯 テストを挑戦</button>
+        <button class="btn btn-ghost" onclick="generateTest()">📄 PDFテスト作成</button>
       </div>
-    </details>
+    </div>
+    <div class="panel" id="pdf-panel" style="display:none;">
+      <div class="paper-actions">
+        <button class="btn btn-accent" id="download-btn" onclick="downloadPDF()">PDFでダウンロード</button>
+        <button class="btn btn-ghost" onclick="window.print()">印刷する</button>
+      </div>
+      <div style="border: 1px solid var(--border); border-radius: 10px; overflow: hidden;">
+        <div id="test-paper"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- 生成結果 -->
-  <div id="result-area">
-    <div class="paper-actions no-print">
-      <button class="btn btn-accent" id="download-btn" onclick="downloadPDF()">PDFでダウンロード</button>
-      <button class="btn btn-ghost" onclick="window.print()">印刷する</button>
-      <button class="btn btn-ghost" onclick="generateTest()">同じ設定で再作成</button>
-    </div>
-
-    <div class="panel" style="padding:0; overflow:hidden;">
-      <div id="test-paper">
-        <!-- 問題ページ -->
-        <div class="sheet">
-          <h2 id="paper-title">英単語テスト</h2>
-          <div class="test-sub" id="paper-sub"></div>
-          <div class="test-info">
-            <span>実施日：　　　年　　月　　日</span>
-            <span>氏名：<span class="name-line">　</span></span>
-            <span>得点：　　　／ <span id="display-count"></span></span>
+  <div class="tab-content" id="tab-challenge">
+    <div class="challenge-container">
+      <div class="panel">
+        <div id="challenge-status" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div>
+            <span id="challenge-progress" style="font-weight:bold; color:var(--main);">問題 1/20</span>
           </div>
-          <table class="q-table">
-            <thead>
-              <tr><th class="col-no">No.</th><th class="col-q">問題</th><th class="col-a">解答欄</th></tr>
-            </thead>
-            <tbody id="test-body"></tbody>
-          </table>
+          <button class="btn btn-ghost btn-small" onclick="switchTab('create')">戻る</button>
         </div>
-
-        <div class="page-break"></div>
-
-        <!-- 解答ページ -->
-        <div class="sheet">
-          <h2 id="answer-title">英単語テスト【解答】</h2>
-          <table class="q-table">
-            <thead>
-              <tr><th class="col-no">No.</th><th class="col-q">問題</th><th class="col-a">正解</th></tr>
-            </thead>
-            <tbody id="answer-body"></tbody>
-          </table>
+        <div id="question-card" class="question-card"></div>
+        <div class="challenge-nav">
+          <button class="btn btn-ghost" id="prev-btn" onclick="prevQuestion()" style="display:none;">← 前へ</button>
+          <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()">次へ →</button>
         </div>
+      </div>
+    </div>
+    <div class="panel" id="challenge-result" style="display:none;">
+      <h2>テスト結果</h2>
+      <div id="result-summary"></div>
+      <h3 style="margin-top:20px;">詳細</h3>
+      <div id="result-detail"></div>
+      <div class="paper-actions" style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="switchTab('review')">🔄 復習に進む</button>
+        <button class="btn btn-ghost" onclick="switchTab('create')">メニューに戻る</button>
       </div>
     </div>
   </div>
 
-  <footer class="app-footer no-print">
-    収録データ：ukaru-eigo.com 鉄壁単語リストの表から抽出した語彙（Section 1〜3）＋鉄壁レベルの補充語彙。<br>
-    上の「単語データの取り込み」から元サイトの表を貼り付けると、全データをサイト掲載のものに差し替えられます。
-  </footer>
+  <div class="tab-content" id="tab-review">
+    <div class="panel">
+      <h2>SRS復習（スペーシング・リピティション）</h2>
+      <div id="review-info-box"></div>
+      <div id="review-mode-select" style="display:flex; gap:10px; margin-bottom:20px;">
+        <button class="btn btn-primary" onclick="loadReviewItems('due')">📅 今日の復習（<span id="due-count">0</span>語）</button>
+        <button class="btn btn-ghost" onclick="loadReviewItems('all')">📚 全復習対象（<span id="all-count">0</span>語）</button>
+      </div>
+      <div id="review-list" class="review-list"></div>
+      <div id="review-empty" style="text-align:center; color:#889; padding:30px;">
+        まだ復習対象がありません。テストに挑戦して間違えた単語を記録しましょう。
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-content" id="tab-progress">
+    <div class="panel">
+      <h2>学習統計</h2>
+      <div class="progress-grid">
+        <div class="progress-card"><div class="progress-number" id="stat-total">0</div><div class="progress-label">習得単語数</div></div>
+        <div class="progress-card"><div class="progress-number" id="stat-learning">0</div><div class="progress-label">学習中</div></div>
+        <div class="progress-card"><div class="progress-number" id="stat-tests">0</div><div class="progress-label">テスト実施</div></div>
+        <div class="progress-card"><div class="progress-number" id="stat-accuracy">0%</div><div class="progress-label">平均正答率</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>セクション別習得度</h2>
+      <div id="section-progress-list"></div>
+    </div>
+    <div class="panel">
+      <h2>学習履歴グラフ</h2>
+      <div class="chart-container">
+        <canvas id="history-chart"></canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>最近の学習</h2>
+      <table class="stats-table">
+        <thead>
+          <tr><th>日付</th><th>問題数</th><th>正解</th><th>正答率</th></tr>
+        </thead>
+        <tbody id="history-table"></tbody>
+      </table>
+      <button class="btn btn-ghost" onclick="clearAllData()" style="margin-top:20px;">全データを削除</button>
+    </div>
+  </div>
 </div>
+
+<footer class="app-footer no-print">
+  💡 学習データはブラウザのlocalStorageに保存されます（ブラウザクリア時に消えます）
+</footer>
 
 <script>
   "use strict";
 
   // ============================================================
-  // 単語データ（UTF-8。Section 1〜3 は元サイトの表から抽出したもの）
+  // 単語データ（2176語、22セクション）
   // ============================================================
   const DEFAULT_SECTIONS = [
     { name: "鉄壁 Section 1", words: [
@@ -2561,32 +2496,66 @@
     ] }
   ];
 
-  const STORAGE_KEY = "tetuWordSections_v1";
+  // ============================================================
+  // グローバル変数
+  // ============================================================
   let sections = loadSections();
+  let currentChallenge = null;
+  let challengeIndex = 0;
+  let histogram = null;
 
+  const STORAGE_KEY = "tetuWordData_v2";
+  const DAY_MS = 86400000;
+
+  // ============================================================
+  // UI初期化
+  // ============================================================
+  window.addEventListener('DOMContentLoaded', () => {
+    renderSectionList();
+    updatePoolInfo();
+    setupTabButtons();
+    updateProgressDisplay();
+    updateReviewCounts();
+  });
+
+  function setupTabButtons() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        switchTab(tab);
+      });
+    });
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    if (tabName === 'progress') updateProgressDisplay();
+    if (tabName === 'review') updateReviewCounts();
+  }
+
+  // ============================================================
+  // セクション管理
+  // ============================================================
   function loadSections() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length &&
-            parsed.every(s => s && typeof s.name === "string" && Array.isArray(s.words))) {
+        if (Array.isArray(parsed) && parsed.length && parsed.every(s => s && typeof s.name === "string" && Array.isArray(s.words))) {
           return parsed;
         }
       }
-    } catch (e) { /* localStorage不可・破損時はデフォルトを使用 */ }
-    return deepCopy(DEFAULT_SECTIONS);
+    } catch (e) {}
+    return JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
   }
 
   function saveSections() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sections)); } catch (e) { /* 保存不可でも動作継続 */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sections)); } catch (e) {}
   }
 
-  function deepCopy(obj) { return JSON.parse(JSON.stringify(obj)); }
-
-  // ============================================================
-  // 出題範囲 UI
-  // ============================================================
   function renderSectionList() {
     const box = document.getElementById("section-list");
     box.innerHTML = "";
@@ -2634,7 +2603,390 @@
   }
 
   // ============================================================
-  // テスト生成
+  // テスト作成（PDF用）
+  // ============================================================
+  function generateTest() {
+    const pool = getSelectedPool();
+    if (pool.length === 0) { alert("セクションを選んでください"); return; }
+    let count = parseInt(document.getElementById("question-count").value, 10);
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > pool.length) { count = pool.length; document.getElementById("question-count").value = count; }
+    const type = document.getElementById("question-type").value;
+    const title = document.getElementById("test-title").value.trim() || "英単語テスト";
+    const selected = shuffle(pool.slice()).slice(0, count);
+    const questions = selected.map(item => {
+      const enToJa = (type === "en-ja") || (type === "mix" && Math.random() < 0.5);
+      return enToJa ? { q: item.en, a: item.ja } : { q: item.ja, a: item.en };
+    });
+    document.getElementById("paper-title").textContent = title;
+    document.getElementById("answer-title").textContent = title + "【解答】";
+    const typeLabel = { "en-ja": "英単語の意味を日本語で答えなさい", "ja-en": "日本語の意味に合う英単語を書きなさい", "mix": "英単語は意味を、日本語は英単語を答えなさい" }[type];
+    document.getElementById("paper-sub").textContent = "全 " + count + " 問 ｜ " + typeLabel;
+    document.getElementById("display-count").textContent = count;
+    const testBody = document.getElementById("test-body");
+    const answerBody = document.getElementById("answer-body");
+    testBody.innerHTML = "";
+    answerBody.innerHTML = "";
+    questions.forEach((qa, idx) => {
+      const no = idx + 1;
+      testBody.insertAdjacentHTML("beforeend", "<tr><td class='cell-no'>" + no + "</td><td>" + esc(qa.q) + "</td><td class='cell-blank'></td></tr>");
+      answerBody.insertAdjacentHTML("beforeend", "<tr><td class='cell-no'>" + no + "</td><td>" + esc(qa.q) + "</td><td>" + esc(qa.a) + "</td></tr>");
+    });
+    document.getElementById("pdf-panel").style.display = "block";
+    document.getElementById("test-paper").scrollIntoView({ behavior: "smooth" });
+  }
+
+  // ============================================================
+  // テスト挑戦（ブラウザ内で解く）
+  // ============================================================
+  function startChallenge() {
+    const pool = getSelectedPool();
+    if (pool.length === 0) { alert("セクションを選んでください"); return; }
+    let count = parseInt(document.getElementById("question-count").value, 10);
+    if (isNaN(count) || count < 1) count = 1;
+    if (count > pool.length) count = pool.length;
+    const type = document.getElementById("question-type").value;
+    const selected = shuffle(pool.slice()).slice(0, count);
+    currentChallenge = {
+      questions: selected.map(item => {
+        const enToJa = (type === "en-ja") || (type === "mix" && Math.random() < 0.5);
+        return { en: item.en, ja: item.ja, isEnToJa: enToJa, userAnswer: null, submitted: false };
+      }),
+      type: type,
+      results: []
+    };
+    challengeIndex = 0;
+    switchTab('challenge');
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const q = currentChallenge.questions[challengeIndex];
+    const card = document.getElementById("question-card");
+    const progress = document.getElementById("challenge-progress");
+    progress.textContent = `問題 ${challengeIndex + 1}/${currentChallenge.questions.length}`;
+    card.innerHTML = `
+      <div class="question-number">問題 ${challengeIndex + 1} / ${currentChallenge.questions.length}</div>
+      <div class="question-text">${esc(q.isEnToJa ? q.en : q.ja)}</div>
+      <div id="options-area"></div>
+    `;
+    if (q.isEnToJa) {
+      // 英→日: 4択
+      const options = shuffle([q.ja, ...getRandomOptions(3, q.en)]);
+      let optionsHtml = '<div class="options">';
+      options.forEach((opt, i) => {
+        const isSelected = q.userAnswer === opt;
+        const isCorrect = opt === q.ja;
+        let className = 'option-btn';
+        if (q.submitted) {
+          if (isCorrect) className += ' correct';
+          else if (isSelected && !isCorrect) className += ' incorrect';
+        } else if (isSelected) {
+          className += ' selected';
+        }
+        optionsHtml += `<button class="${className}" onclick="selectOption('en-ja', ${i})">${esc(opt)}</button>`;
+      });
+      optionsHtml += '</div>';
+      document.getElementById("options-area").innerHTML = optionsHtml;
+    } else {
+      // 日→英: テキスト入力
+      let html = `<input type="text" class="answer-input" id="user-input" placeholder="英単語を入力" value="${esc(q.userAnswer || '')}" onkeydown="if(event.key==='Enter') submitAnswer()">`;
+      if (q.submitted) {
+        const correct = q.userAnswer === q.en;
+        html += `<div style="padding:10px; border-radius:6px; background:${correct?'#d4edda':'#f8d7da'}; color:${correct?'#1e7d3c':'#c0392b'};">`;
+        html += correct ? `✓ 正解：${esc(q.en)}` : `✗ 不正解<br>正解：${esc(q.en)}`;
+        html += '</div>';
+      }
+      document.getElementById("options-area").innerHTML = html;
+      if (!q.submitted) document.getElementById("user-input").focus();
+    }
+    updateNavigationButtons();
+  }
+
+  function selectOption(type, index) {
+    if (currentChallenge.questions[challengeIndex].submitted) return;
+    const options = document.querySelectorAll('.option-btn');
+    options.forEach((o, i) => {
+      o.classList.toggle('selected', i === index);
+    });
+    currentChallenge.questions[challengeIndex].userAnswer = options[index].textContent.trim();
+  }
+
+  function submitAnswer() {
+    const q = currentChallenge.questions[challengeIndex];
+    if (q.submitted) return;
+    if (!q.userAnswer) {
+      if (q.isEnToJa) {
+        alert("選択肢を選んでください");
+      } else {
+        const input = document.getElementById("user-input");
+        if (!input.value.trim()) { alert("英単語を入力してください"); return; }
+        q.userAnswer = input.value.trim();
+      }
+    }
+    q.submitted = true;
+    const correct = q.userAnswer === (q.isEnToJa ? q.ja : q.en);
+    currentChallenge.results.push({ en: q.en, ja: q.ja, userAnswer: q.userAnswer, correct: correct, submitted: true });
+    renderQuestion();
+  }
+
+  function nextQuestion() {
+    const q = currentChallenge.questions[challengeIndex];
+    if (!q.submitted) { submitAnswer(); return; }
+    if (challengeIndex < currentChallenge.questions.length - 1) {
+      challengeIndex++;
+      renderQuestion();
+    } else {
+      showChallengeResult();
+    }
+  }
+
+  function prevQuestion() {
+    if (challengeIndex > 0) { challengeIndex--; renderQuestion(); }
+  }
+
+  function updateNavigationButtons() {
+    const prevBtn = document.getElementById("prev-btn");
+    const nextBtn = document.getElementById("next-btn");
+    prevBtn.style.display = challengeIndex > 0 ? "block" : "none";
+    nextBtn.textContent = challengeIndex === currentChallenge.questions.length - 1 && currentChallenge.questions[challengeIndex].submitted ? "結果を見る →" : "次へ →";
+  }
+
+  function showChallengeResult() {
+    const results = currentChallenge.results;
+    const correct = results.filter(r => r.correct).length;
+    const accuracy = Math.round(correct / results.length * 100);
+    document.querySelector('.challenge-container').style.display = 'none';
+    document.getElementById("challenge-result").style.display = 'block';
+    document.getElementById("result-summary").innerHTML = `
+      <div style="font-size:16px; margin-bottom:16px;">
+        <strong>${correct}/${results.length}正解</strong> | 正答率 <strong style="color:var(--main);">${accuracy}%</strong>
+      </div>
+    `;
+    let detailHtml = '';
+    results.forEach((r, i) => {
+      const className = r.correct ? '' : ' incorrect';
+      detailHtml += `
+        <div class="result-card${className}">
+          <div class="result-header">
+            <span class="result-word">${esc(r.en)}</span>
+            <span class="result-status ${r.correct ? 'ok' : 'ng'}">${r.correct ? '✓ 正解' : '✗ 不正解'}</span>
+          </div>
+          <div class="result-detail">
+            意味：${esc(r.ja)}<br>
+            あなたの答え：${esc(r.userAnswer)}<br>
+          </div>
+        </div>
+      `;
+    });
+    document.getElementById("result-detail").innerHTML = detailHtml;
+    saveTestResult(results, accuracy);
+    updateProgressDisplay();
+    updateReviewCounts();
+  }
+
+  // ============================================================
+  // データ保存＆復習管理
+  // ============================================================
+  function saveTestResult(results, accuracy) {
+    const data = loadTestData();
+    const today = new Date().toISOString().split('T')[0];
+    let todayRecord = data.history.find(h => h.date === today);
+    if (!todayRecord) {
+      todayRecord = { date: today, tests: 0, totalQuestions: 0, totalCorrect: 0 };
+      data.history.push(todayRecord);
+    }
+    todayRecord.tests++;
+    todayRecord.totalQuestions += results.length;
+    todayRecord.totalCorrect += results.filter(r => r.correct).length;
+    results.forEach(r => {
+      if (!data.wordProgress[r.en]) {
+        data.wordProgress[r.en] = { status: 'learning', correctCount: 0, incorrectCount: 0, lastReviewDate: today, nextReviewDate: today };
+      }
+      const wp = data.wordProgress[r.en];
+      if (r.correct) {
+        wp.correctCount++;
+        if (wp.correctCount >= 3) {
+          wp.status = 'mastered';
+          wp.nextReviewDate = addDays(today, 30);
+        } else if (wp.correctCount >= 2) {
+          wp.nextReviewDate = addDays(today, 7);
+        } else {
+          wp.nextReviewDate = addDays(today, 3);
+        }
+      } else {
+        wp.incorrectCount++;
+        wp.nextReviewDate = today;
+      }
+      wp.lastReviewDate = today;
+    });
+    saveTestData(data);
+  }
+
+  function loadTestData() {
+    try {
+      const raw = localStorage.getItem('tetuTestData_v1');
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { history: [], wordProgress: {} };
+  }
+
+  function saveTestData(data) {
+    try { localStorage.setItem('tetuTestData_v1', JSON.stringify(data)); } catch (e) {}
+  }
+
+  function addDays(dateStr, days) {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split('T')[0];
+  }
+
+  // ============================================================
+  // 復習
+  // ============================================================
+  function updateReviewCounts() {
+    const data = loadTestData();
+    const today = new Date().toISOString().split('T')[0];
+    let dueCount = 0, allCount = 0;
+    Object.values(data.wordProgress).forEach(wp => {
+      allCount++;
+      if (wp.nextReviewDate <= today) dueCount++;
+    });
+    document.getElementById("due-count").textContent = dueCount;
+    document.getElementById("all-count").textContent = allCount;
+  }
+
+  function loadReviewItems(mode) {
+    const data = loadTestData();
+    const today = new Date().toISOString().split('T')[0];
+    let items = [];
+    Object.entries(data.wordProgress).forEach(([en, wp]) => {
+      if (mode === 'due' && wp.nextReviewDate > today) return;
+      items.push({ en, ...wp });
+    });
+    if (items.length === 0) {
+      document.getElementById("review-list").style.display = 'none';
+      document.getElementById("review-empty").style.display = 'block';
+    } else {
+      document.getElementById("review-empty").style.display = 'none';
+      document.getElementById("review-list").style.display = 'grid';
+      let html = '';
+      items.forEach(w => {
+        const word = sections.flatMap(s => s.words).find(x => x[0] === w.en);
+        const ja = word ? word[1] : '???';
+        const daysUntilNext = Math.ceil((new Date(w.nextReviewDate) - new Date(today)) / DAY_MS);
+        let badge = '';
+        if (daysUntilNext <= 0) badge = `<span class="review-badge">今日</span>`;
+        else if (daysUntilNext === 1) badge = `<span class="review-badge" style="background:#d68910;">明日</span>`;
+        else badge = `<span class="review-badge" style="background:#889;">${daysUntilNext}日後</span>`;
+        html += `
+          <div class="review-item">
+            <div class="review-word">
+              <div class="review-word-en">${esc(w.en)}</div>
+              <div class="review-word-ja">${esc(ja)}</div>
+            </div>
+            <div class="review-meta">
+              ${badge}<br>
+              正解${w.correctCount} / 失敗${w.incorrectCount}
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById("review-list").innerHTML = html;
+    }
+  }
+
+  // ============================================================
+  // 進捗・統計
+  // ============================================================
+  function updateProgressDisplay() {
+    const data = loadTestData();
+    const masteredCount = Object.values(data.wordProgress).filter(w => w.status === 'mastered').length;
+    const learningCount = Object.values(data.wordProgress).filter(w => w.status === 'learning').length;
+    const testCount = data.history.reduce((n, h) => n + h.tests, 0);
+    const totalQuestions = data.history.reduce((n, h) => n + h.totalQuestions, 0);
+    const totalCorrect = data.history.reduce((n, h) => n + h.totalCorrect, 0);
+    const avgAccuracy = totalQuestions > 0 ? Math.round(totalCorrect / totalQuestions * 100) : 0;
+    document.getElementById("stat-total").textContent = masteredCount;
+    document.getElementById("stat-learning").textContent = learningCount;
+    document.getElementById("stat-tests").textContent = testCount;
+    document.getElementById("stat-accuracy").textContent = avgAccuracy + '%';
+
+    // セクション別習得度
+    let sectionHtml = '';
+    sections.forEach((sec, i) => {
+      const wordCount = sec.words.length;
+      const masteredWords = sec.words.filter(w => data.wordProgress[w[0]] && data.wordProgress[w[0]].status === 'mastered').length;
+      const percent = Math.round(masteredWords / wordCount * 100);
+      sectionHtml += `
+        <div class="section-progress">
+          <div class="section-progress-label">
+            <span>${sec.name}</span>
+            <span>${masteredWords}/${wordCount}</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${percent}%">${percent > 5 ? percent + '%' : ''}</div>
+          </div>
+        </div>
+      `;
+    });
+    document.getElementById("section-progress-list").innerHTML = sectionHtml;
+
+    // グラフ
+    const lastDays = 14;
+    const labels = [];
+    const accuracyData = [];
+    for (let i = lastDays - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const record = data.history.find(h => h.date === dateStr);
+      labels.push(dateStr.slice(5));
+      if (record) {
+        accuracyData.push(Math.round(record.totalCorrect / record.totalQuestions * 100));
+      } else {
+        accuracyData.push(null);
+      }
+    }
+    if (histogram) histogram.destroy();
+    const ctx = document.getElementById('history-chart').getContext('2d');
+    histogram = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: '正答率 (%)',
+          data: accuracyData,
+          borderColor: 'var(--main)',
+          backgroundColor: 'rgba(44, 95, 138, 0.1)',
+          borderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: 'var(--main)'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }
+        }
+      }
+    });
+
+    // テーブル
+    let tableHtml = '';
+    data.history.slice().reverse().slice(0, 10).forEach(h => {
+      const acc = Math.round(h.totalCorrect / h.totalQuestions * 100);
+      tableHtml += `<tr><td>${h.date}</td><td>${h.totalQuestions}</td><td>${h.totalCorrect}</td><td>${acc}%</td></tr>`;
+    });
+    document.getElementById("history-table").innerHTML = tableHtml;
+  }
+
+  // ============================================================
+  // ユーティリティ
   // ============================================================
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -2648,72 +3000,28 @@
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  function generateTest() {
-    const pool = getSelectedPool();
-    if (pool.length === 0) {
-      alert("出題範囲が選択されていません。セクションを選んでください。");
-      return;
+  function getRandomOptions(count, excludeWord) {
+    const allWords = sections.flatMap(s => s.words);
+    const options = [];
+    while (options.length < count) {
+      const w = allWords[Math.floor(Math.random() * allWords.length)];
+      if (w[1] !== excludeWord && !options.includes(w[1])) {
+        options.push(w[1]);
+      }
     }
-    let count = parseInt(document.getElementById("question-count").value, 10);
-    if (isNaN(count) || count < 1) count = 1;
-    if (count > pool.length) {
-      count = pool.length;
-      document.getElementById("question-count").value = count;
-    }
-    const type = document.getElementById("question-type").value;
-    const title = document.getElementById("test-title").value.trim() || "英単語テスト";
-
-    const selected = shuffle(pool.slice()).slice(0, count);
-
-    const questions = selected.map(item => {
-      const enToJa = (type === "en-ja") || (type === "mix" && Math.random() < 0.5);
-      return enToJa
-        ? { q: item.en, a: item.ja }
-        : { q: item.ja, a: item.en };
-    });
-
-    document.getElementById("paper-title").textContent = title;
-    document.getElementById("answer-title").textContent = title + "【解答】";
-    const typeLabel = { "en-ja": "英単語の意味を日本語で答えなさい",
-                        "ja-en": "日本語の意味に合う英単語を書きなさい",
-                        "mix":   "英単語は意味を、日本語は英単語を答えなさい" }[type];
-    document.getElementById("paper-sub").textContent = "全 " + count + " 問 ｜ " + typeLabel;
-    document.getElementById("display-count").textContent = count;
-
-    const testBody = document.getElementById("test-body");
-    const answerBody = document.getElementById("answer-body");
-    testBody.innerHTML = "";
-    answerBody.innerHTML = "";
-
-    questions.forEach((qa, idx) => {
-      const no = idx + 1;
-      testBody.insertAdjacentHTML("beforeend",
-        "<tr><td class='cell-no'>" + no + "</td><td>" + esc(qa.q) + "</td><td class='cell-blank'></td></tr>");
-      answerBody.insertAdjacentHTML("beforeend",
-        "<tr><td class='cell-no'>" + no + "</td><td>" + esc(qa.q) + "</td><td>" + esc(qa.a) + "</td></tr>");
-    });
-
-    document.getElementById("result-area").style.display = "block";
-    document.getElementById("test-paper").scrollIntoView({ behavior: "smooth", block: "start" });
+    return options;
   }
 
-  // ============================================================
-  // PDF ダウンロード
-  // ============================================================
   function downloadPDF() {
     if (typeof html2pdf === "undefined") {
-      alert("PDFライブラリの読み込みに失敗しました（オフラインの可能性があります）。\n「印刷する」ボタンからブラウザの印刷機能で「PDFに保存」をご利用ください。");
+      alert("PDFライブラリが読み込めませんでした。「印刷する」ボタンから「PDFに保存」をご利用ください。");
       return;
     }
     const btn = document.getElementById("download-btn");
     btn.disabled = true;
     btn.textContent = "PDF作成中…";
-
     const d = new Date();
-    const stamp = d.getFullYear() +
-      String(d.getMonth() + 1).padStart(2, "0") +
-      String(d.getDate()).padStart(2, "0");
-
+    const stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
     const opt = {
       margin: [10, 8, 12, 8],
       filename: "word-test_" + stamp + ".pdf",
@@ -2722,10 +3030,9 @@
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["css", "legacy"] }
     };
-
     html2pdf().set(opt).from(document.getElementById("test-paper")).save()
       .catch(err => {
-        alert("PDFの作成に失敗しました：" + err + "\n「印刷する」ボタンからPDF保存もできます。");
+        alert("PDFの作成に失敗しました。「印刷する」ボタンからPDF保存をご利用ください。");
       })
       .finally(() => {
         btn.disabled = false;
@@ -2733,81 +3040,15 @@
       });
   }
 
-  // ============================================================
-  // カスタムデータ取り込み
-  // ============================================================
-  function parseImportText(text) {
-    const result = [];
-    let current = null;
-    let skipped = 0;
-    text.split(/\r?\n/).forEach(line => {
-      const t = line.trim();
-      if (!t) return;
-      const secMatch = t.match(/^(?:##|■|【)\s*(.+?)\s*(?:】)?$/);
-      if (secMatch && !t.includes("\t") && !/^##?\s*$/.test(t)) {
-        current = { name: secMatch[1], words: [] };
-        result.push(current);
-        return;
-      }
-      // タブ優先、なければ最初のカンマ・読点で分割
-      let en, ja;
-      if (t.includes("\t")) {
-        const parts = t.split("\t").map(p => p.trim()).filter(p => p !== "");
-        en = parts[0]; ja = parts.slice(1).join(" ");
-      } else {
-        const m = t.match(/^([A-Za-z][A-Za-z0-9 .'\/()-]*?)\s*[,，、:：]\s*(.+)$/);
-        if (m) { en = m[1].trim(); ja = m[2].trim(); }
-      }
-      if (en && ja) {
-        if (!current) {
-          current = { name: "取り込みデータ", words: [] };
-          result.push(current);
-        }
-        current.words.push([en, ja]);
-      } else {
-        skipped++;
-      }
-    });
-    return { sections: result.filter(s => s.words.length > 0), skipped: skipped };
-  }
-
-  function showImportMsg(msg, ok) {
-    const el = document.getElementById("import-msg");
-    el.textContent = msg;
-    el.className = "import-msg " + (ok ? "ok" : "err");
-  }
-
-  function importWords(replace) {
-    const text = document.getElementById("import-text").value;
-    const { sections: parsed, skipped } = parseImportText(text);
-    const total = parsed.reduce((n, s) => n + s.words.length, 0);
-    if (total === 0) {
-      showImportMsg("取り込める行が見つかりませんでした。「英単語（タブまたはカンマ）意味」の形式で貼り付けてください。", false);
-      return;
+  function clearAllData() {
+    if (confirm("全ての学習データを削除します。よろしいですか？")) {
+      localStorage.removeItem('tetuTestData_v1');
+      updateProgressDisplay();
+      updateReviewCounts();
+      alert("データを削除しました。");
     }
-    if (replace) {
-      sections = parsed;
-    } else {
-      sections = sections.concat(parsed);
-    }
-    saveSections();
-    renderSectionList();
-    document.getElementById("import-text").value = "";
-    showImportMsg("✓ " + total + " 語を取り込みました" +
-      (skipped > 0 ? "（" + skipped + " 行はスキップ）" : "") +
-      "。データはこのブラウザに保存されました。", true);
   }
-
-  function resetWords() {
-    if (!confirm("取り込んだデータを削除して初期収録データに戻します。よろしいですか？")) return;
-    sections = deepCopy(DEFAULT_SECTIONS);
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* noop */ }
-    renderSectionList();
-    showImportMsg("初期データに戻しました。", true);
-  }
-
-  // 初期化
-  renderSectionList();
 </script>
+
 </body>
 </html>
